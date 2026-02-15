@@ -1,20 +1,3 @@
-import type { } from './types';
-
-// QRコード生成ライブラリをCDNから読み込む
-export const loadQRCodeScript = (): Promise<typeof window.QRCode> => {
-  return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && window.QRCode) {
-      resolve(window.QRCode);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    script.onload = () => resolve(window.QRCode);
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-};
-
 // API呼び出しヘルパー
 export const callAnthropicAPI = async (
   messages: { role: string; content: string | Array<{ type: string; [key: string]: unknown }> }[],

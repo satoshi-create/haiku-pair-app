@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { loadQRCodeScript } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 
 interface HostScreenProps {
   sessionId: string;
@@ -16,34 +16,24 @@ export default function HostScreen({
   onStartSession,
   onCancel,
 }: HostScreenProps) {
-  const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrError, setQrError] = useState(false);
 
   useEffect(() => {
-    if (!sessionId || qrCodeGenerated) return;
+    if (!sessionId || !canvasRef.current) return;
 
-    const generateQR = async () => {
-      try {
-        await loadQRCodeScript();
-        const qrContainer = document.getElementById('qrcode-container');
-        if (qrContainer && window.QRCode) {
-          qrContainer.innerHTML = '';
-          const joinURL = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
-          new window.QRCode(qrContainer, {
-            text: joinURL,
-            width: 256,
-            height: 256,
-            colorDark: '#1c1917',
-            colorLight: '#ffffff',
-            correctLevel: window.QRCode.CorrectLevel.H,
-          });
-          setQrCodeGenerated(true);
-        }
-      } catch (error) {
-        console.error('QRコード生成エラー:', error);
-      }
-    };
-    generateQR();
-  }, [sessionId, qrCodeGenerated]);
+    const joinURL = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
+
+    QRCode.toCanvas(canvasRef.current, joinURL, {
+      width: 256,
+      margin: 2,
+      color: { dark: '#1c1917', light: '#ffffff' },
+      errorCorrectionLevel: 'H',
+    }).catch((err) => {
+      console.error('QRコード生成エラー:', err);
+      setQrError(true);
+    });
+  }, [sessionId]);
 
   return (
     <div className="space-y-6">
@@ -64,9 +54,13 @@ export default function HostScreen({
           <div className="text-center">
             <p className="text-sm text-stone-600 mb-4">または、QRコードを読み取ってもらう</p>
             <div className="bg-white p-4 rounded-lg inline-block border-2 border-stone-200">
-              <div id="qrcode-container" className="flex items-center justify-center min-h-[256px]">
-                <div className="text-stone-400">QRコード生成中...</div>
-              </div>
+              {qrError ? (
+                <div className="flex items-center justify-center min-h-64 min-w-64 text-stone-400">
+                  QRコードの生成に失敗しました
+                </div>
+              ) : (
+                <canvas ref={canvasRef} />
+              )}
             </div>
             <p className="text-xs text-stone-500 mt-2">
               スマホのカメラでこのQRコードを読み取ってください

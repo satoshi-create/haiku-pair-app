@@ -75,13 +75,15 @@ export default function SessionScreen({
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 1) {
           setTimerRunning(false);
-          try {
-            const audio = new Audio(
-              'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTO'
-            );
-            audio.play();
-          } catch {
-            console.log('Audio not supported');
+          if (typeof Audio !== 'undefined') {
+            try {
+              const audio = new Audio(
+                'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTO'
+              );
+              audio.play();
+            } catch {
+              // Audio not supported
+            }
           }
           return 0;
         }

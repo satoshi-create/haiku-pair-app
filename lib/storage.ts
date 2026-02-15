@@ -1,18 +1,22 @@
 import type { SessionData, HaikuHistoryEntry } from './types';
 
+const isBrowser = typeof window !== 'undefined';
+
 // --- Session ---
 
 export function saveSession(id: string, data: SessionData): void {
+  if (!isBrowser) return;
   try {
-    window.localStorage.setItem(`session_${id}`, JSON.stringify(data));
+    localStorage.setItem(`session_${id}`, JSON.stringify(data));
   } catch {
     console.log('Storage not available, using in-memory only');
   }
 }
 
 export function loadSession(id: string): SessionData | null {
+  if (!isBrowser) return null;
   try {
-    const stored = window.localStorage.getItem(`session_${id}`);
+    const stored = localStorage.getItem(`session_${id}`);
     return stored ? JSON.parse(stored) : null;
   } catch {
     return null;
@@ -22,8 +26,9 @@ export function loadSession(id: string): SessionData | null {
 // --- History ---
 
 export function loadHistory(): HaikuHistoryEntry[] {
+  if (!isBrowser) return [];
   try {
-    const stored = window.localStorage.getItem('haiku_history');
+    const stored = localStorage.getItem('haiku_history');
     return stored ? JSON.parse(stored) : [];
   } catch {
     console.log('Failed to load history');
@@ -32,8 +37,9 @@ export function loadHistory(): HaikuHistoryEntry[] {
 }
 
 export function saveHistory(history: HaikuHistoryEntry[]): void {
+  if (!isBrowser) return;
   try {
-    window.localStorage.setItem('haiku_history', JSON.stringify(history));
+    localStorage.setItem('haiku_history', JSON.stringify(history));
   } catch {
     console.log('Failed to save history');
   }

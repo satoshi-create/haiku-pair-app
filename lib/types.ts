@@ -1,25 +1,3 @@
-// window.QRCode の型定義
-declare global {
-  interface Window {
-    QRCode: {
-      new (element: HTMLElement, options: {
-        text: string;
-        width: number;
-        height: number;
-        colorDark: string;
-        colorLight: string;
-        correctLevel: number;
-      }): void;
-      CorrectLevel: {
-        L: number;
-        M: number;
-        Q: number;
-        H: number;
-      };
-    };
-  }
-}
-
 export type ScreenMode = 'home' | 'join' | 'host' | 'session' | 'simulation' | 'gallery' | 'kigo_dict';
 
 export interface SessionData {

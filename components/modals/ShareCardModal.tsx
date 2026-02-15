@@ -19,14 +19,14 @@ export default function ShareCardModal({
 
   const copyCardText = () => {
     const text = `${haiku}\n\n季語：${kigo}（${season}）${author ? `\n詠み人：${author}` : ''}\n\n#俳句 #AI句会 #${kigo}`;
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        alert('テキストをクリップボードにコピーしました！');
-      })
-      .catch(() => {
-        alert('コピーに失敗しました');
-      });
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => alert('テキストをクリップボードにコピーしました！'))
+        .catch(() => alert('コピーに失敗しました'));
+    } else {
+      alert('この環境ではクリップボードを使用できません');
+    }
   };
 
   const downloadCard = () => {
