@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { ScreenMode, SessionData, HaikuHistoryEntry, ImageSuggestions } from '@/lib/types';
 import { pickRandomKigo } from '@/lib/kigo';
-import { callAnthropicAPI } from '@/lib/api';
+import { callAI } from '@/lib/api';
 import { saveSession, loadSession, loadHistory, saveHistory } from '@/lib/storage';
 
 import HomeScreen from '@/components/screens/HomeScreen';
@@ -100,10 +100,7 @@ export default function HaikuPairApp() {
     setCurrentHaikuForHaiga(haiku);
 
     try {
-      const data = await callAnthropicAPI([
-        {
-          role: 'user',
-          content: `以下の俳句に相応しい俳画（haiga）の情景を、簡潔に日本語で描写してください。
+      const data = await callAI(`以下の俳句に相応しい俳画（haiga）の情景を、簡潔に日本語で描写してください。
 
 俳句：
 ${haiku}
@@ -116,12 +113,9 @@ ${haiku}
 - 季節感を大切に
 - 写実的ではなく、印象的に
 
-150文字以内で、どんな情景を描くべきか説明してください。`,
-        },
-      ]);
+150文字以内で、どんな情景を描くべきか説明してください。`);
 
-      const text = data.content?.find((c: { type: string }) => c.type === 'text')?.text || '';
-      setGeneratedHaigaDescription(text);
+      setGeneratedHaigaDescription(data.text);
     } catch (error) {
       console.error('Haiga generation error:', error);
       setGeneratedHaigaDescription('俳画の生成に失敗しました。もう一度お試しください。');
@@ -168,21 +162,8 @@ ${haiku}
     try {
       const base64Image = await convertToBase64(imageFile);
 
-      const data = await callAnthropicAPI([
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: imageFile.type,
-                data: base64Image,
-              },
-            },
-            {
-              type: 'text',
-              text: `この写真を見て、俳句を詠むためのヒントを提案してください。
+      const data = await callAI(
+        `この写真を見て、俳句を詠むためのヒントを提案してください。
 
 以下のJSON形式で回答してください：
 {
@@ -191,13 +172,13 @@ ${haiku}
   "scene_description": "この写真の情景を簡潔に説明",
   "haiku_hints": ["俳句のヒント1", "俳句のヒント2", "俳句のヒント3"]
 }`,
-            },
-          ],
+        {
+          mode: 'json',
+          image: { data: base64Image, mediaType: imageFile.type },
         },
-      ]);
+      );
 
-      const text = data.content?.find((c: { type: string }) => c.type === 'text')?.text || '';
-      const cleanText = text.replace(/```json|```/g, '').trim();
+      const cleanText = data.text.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleanText);
       setImageSuggestions(parsed);
     } catch (error) {
@@ -235,10 +216,8 @@ ${haiku}
     setShowAISuggest(true);
 
     try {
-      const data = await callAnthropicAPI([
-        {
-          role: 'user',
-          content: `あなたは俳句の師匠です。以下のユーザーの句の断片やアイデアをもとに、季語「${kigoVal}」を使った俳句を3〜5句提案してください。
+      const data = await callAI(
+        `以下のユーザーの句の断片やアイデアをもとに、季語「${kigoVal}」を使った俳句を3〜5句提案してください。
 
 ユーザーの句・アイデア：
 ${idea}
@@ -251,11 +230,10 @@ ${idea}
     "俳句3"
   ]
 }`,
-        },
-      ]);
+        { mode: 'json' },
+      );
 
-      const text = data.content?.find((c: { type: string }) => c.type === 'text')?.text || '';
-      const cleanText = text.replace(/```json|```/g, '').trim();
+      const cleanText = data.text.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleanText);
       setAiSuggestions(parsed.suggestions || []);
     } catch (error) {

@@ -1,21 +1,21 @@
-// API呼び出しヘルパー
-export const callAnthropicAPI = async (
-  messages: { role: string; content: string | Array<{ type: string; [key: string]: unknown }> }[],
-  maxTokens = 1000
-) => {
-  const apiKey = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+// API呼び出しヘルパー — Next.js Route Handler 経由で OpenAI API を呼ぶ
+
+interface CallAIOptions {
+  mode?: 'json';
+  image?: { data: string; mediaType: string };
+}
+
+export const callAI = async (
+  prompt: string,
+  options?: CallAIOptions,
+): Promise<{ text: string }> => {
+  const response = await fetch('/api/ai', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey || '',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      messages,
+      prompt,
+      mode: options?.mode,
+      image: options?.image,
     }),
   });
   return response.json();
