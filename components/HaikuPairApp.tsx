@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { ScreenMode, SessionData, HaikuHistoryEntry, ImageSuggestions } from '@/lib/types';
 import { pickRandomKigo } from '@/lib/kigo';
-import { callAI } from '@/lib/api';
+import { generateHaiga as generateHaigaAI, analyzeImage, generateHaikuSuggestions } from '@/lib/ai';
 import { saveSession, loadSession, loadHistory, saveHistory } from '@/lib/storage';
 
 import HomeScreen from '@/components/screens/HomeScreen';
@@ -100,22 +100,8 @@ export default function HaikuPairApp() {
     setCurrentHaikuForHaiga(haiku);
 
     try {
-      const data = await callAI(`以下の俳句に相応しい俳画（haiga）の情景を、簡潔に日本語で描写してください。
-
-俳句：
-${haiku}
-
-季語：${kigoVal}
-
-俳画の特徴：
-- 墨絵のようなシンプルな構図
-- 余白を活かした表現
-- 季節感を大切に
-- 写実的ではなく、印象的に
-
-150文字以内で、どんな情景を描くべきか説明してください。`);
-
-      setGeneratedHaigaDescription(data.text);
+      const description = await generateHaigaAI(haiku, kigoVal);
+      setGeneratedHaigaDescription(description);
     } catch (error) {
       console.error('Haiga generation error:', error);
       setGeneratedHaigaDescription('俳画の生成に失敗しました。もう一度お試しください。');
@@ -161,25 +147,7 @@ ${haiku}
 
     try {
       const base64Image = await convertToBase64(imageFile);
-
-      const data = await callAI(
-        `この写真を見て、俳句を詠むためのヒントを提案してください。
-
-以下のJSON形式で回答してください：
-{
-  "season": "春/夏/秋/冬のいずれか",
-  "kigo_suggestions": ["季語1", "季語2", "季語3"],
-  "scene_description": "この写真の情景を簡潔に説明",
-  "haiku_hints": ["俳句のヒント1", "俳句のヒント2", "俳句のヒント3"]
-}`,
-        {
-          mode: 'json',
-          image: { data: base64Image, mediaType: imageFile.type },
-        },
-      );
-
-      const cleanText = data.text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleanText);
+      const parsed = await analyzeImage(base64Image, imageFile.type);
       setImageSuggestions(parsed);
     } catch (error) {
       console.error('画像分析エラー:', error);
@@ -216,26 +184,8 @@ ${haiku}
     setShowAISuggest(true);
 
     try {
-      const data = await callAI(
-        `以下のユーザーの句の断片やアイデアをもとに、季語「${kigoVal}」を使った俳句を3〜5句提案してください。
-
-ユーザーの句・アイデア：
-${idea}
-
-以下のJSON形式のみで回答してください（他の文章は一切含めないでください）：
-{
-  "suggestions": [
-    "俳句1",
-    "俳句2",
-    "俳句3"
-  ]
-}`,
-        { mode: 'json' },
-      );
-
-      const cleanText = data.text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleanText);
-      setAiSuggestions(parsed.suggestions || []);
+      const suggestions = await generateHaikuSuggestions(idea, kigoVal);
+      setAiSuggestions(suggestions);
     } catch (error) {
       console.error('AI suggestion error:', error);
       setAiSuggestions([
