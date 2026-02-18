@@ -1,36 +1,51 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import type { ScreenMode, SessionData, HaikuHistoryEntry, ImageSuggestions } from '@/lib/types';
-import { pickRandomKigo } from '@/lib/kigo';
-import { generateHaiga as generateHaigaAI, analyzeImage, generateHaikuSuggestions } from '@/lib/ai';
-import { saveSession, loadSession, loadHistory, saveHistory } from '@/lib/storage';
+import {
+  analyzeImage,
+  generateHaiga as generateHaigaAI,
+  generateHaikuSuggestions,
+} from "@/lib/ai";
+import { pickRandomKigo } from "@/lib/kigo";
+import {
+  loadHistory,
+  loadSession,
+  saveHistory,
+  saveSession,
+} from "@/lib/storage";
+import { supabase } from "@/lib/supabase/client";
+import type {
+  HaikuHistoryEntry,
+  ImageSuggestions,
+  ScreenMode,
+  SessionData,
+} from "@/lib/types";
+import { useEffect, useState } from "react";
 
-import HomeScreen from '@/components/screens/HomeScreen';
-import JoinScreen from '@/components/screens/JoinScreen';
-import HostScreen from '@/components/screens/HostScreen';
-import SessionScreen from '@/components/screens/SessionScreen';
-import SimulationScreen from '@/components/screens/SimulationScreen';
-import GalleryScreen from '@/components/screens/GalleryScreen';
-import KigoDictScreen from '@/components/screens/KigoDictScreen';
+import GalleryScreen from "@/components/screens/GalleryScreen";
+import HomeScreen from "@/components/screens/HomeScreen";
+import HostScreen from "@/components/screens/HostScreen";
+import JoinScreen from "@/components/screens/JoinScreen";
+import KigoDictScreen from "@/components/screens/KigoDictScreen";
+import SessionScreen from "@/components/screens/SessionScreen";
+import SimulationScreen from "@/components/screens/SimulationScreen";
 
-import AISuggestModal from '@/components/modals/AISuggestModal';
-import HaigaModal from '@/components/modals/HaigaModal';
-import ShareCardModal from '@/components/modals/ShareCardModal';
-import ImageUploadModal from '@/components/modals/ImageUploadModal';
+import AISuggestModal from "@/components/modals/AISuggestModal";
+import HaigaModal from "@/components/modals/HaigaModal";
+import ImageUploadModal from "@/components/modals/ImageUploadModal";
+import ShareCardModal from "@/components/modals/ShareCardModal";
 
 export default function HaikuPairApp() {
   // --- 画面モード ---
-  const [mode, setMode] = useState<ScreenMode>('home');
+  const [mode, setMode] = useState<ScreenMode>("home");
 
   // --- セッション状態 ---
-  const [sessionId, setSessionId] = useState('');
-  const [role, setRole] = useState('');
-  const [userName, setUserName] = useState('');
-  const [kigo, setKigo] = useState('');
-  const [season, setSeason] = useState('');
-  const [myHaiku, setMyHaiku] = useState('');
-  const [partnerHaiku, setPartnerHaiku] = useState('');
+  const [sessionId, setSessionId] = useState("");
+  const [role, setRole] = useState("");
+  const [userName, setUserName] = useState("");
+  const [kigo, setKigo] = useState("");
+  const [season, setSeason] = useState("");
+  const [myHaiku, setMyHaiku] = useState("");
+  const [partnerHaiku, setPartnerHaiku] = useState("");
   const [showPartner, setShowPartner] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -42,7 +57,12 @@ export default function HaikuPairApp() {
     setHaikuHistory(loadHistory());
   }, []);
 
-  const saveToHistory = (haiku: string, kigoVal: string, seasonVal: string, author = '私') => {
+  const saveToHistory = (
+    haiku: string,
+    kigoVal: string,
+    seasonVal: string,
+    author = "私",
+  ) => {
     const newEntry: HaikuHistoryEntry = {
       id: Date.now(),
       haiku,
@@ -72,7 +92,7 @@ export default function HaikuPairApp() {
     if (sessionData) {
       const updated = {
         ...sessionData,
-        [role === 'host' ? 'hostVote' : 'guestVote']: vote,
+        [role === "host" ? "hostVote" : "guestVote"]: vote,
       };
       setSessionData(updated);
       saveSession(sessionId, updated);
@@ -82,7 +102,7 @@ export default function HaikuPairApp() {
   const checkPartnerVote = () => {
     const data = loadSession(sessionId);
     if (data) {
-      const vote = role === 'host' ? data.guestVote : data.hostVote;
+      const vote = role === "host" ? data.guestVote : data.hostVote;
       setPartnerVote(vote ?? null);
       setShowVoteResult(true);
     }
@@ -90,9 +110,10 @@ export default function HaikuPairApp() {
 
   // --- 俳画 ---
   const [isGeneratingHaiga, setIsGeneratingHaiga] = useState(false);
-  const [generatedHaigaDescription, setGeneratedHaigaDescription] = useState('');
+  const [generatedHaigaDescription, setGeneratedHaigaDescription] =
+    useState("");
   const [showHaigaModal, setShowHaigaModal] = useState(false);
-  const [currentHaikuForHaiga, setCurrentHaikuForHaiga] = useState('');
+  const [currentHaikuForHaiga, setCurrentHaikuForHaiga] = useState("");
 
   const generateHaiga = async (haiku: string, kigoVal: string) => {
     setIsGeneratingHaiga(true);
@@ -103,8 +124,10 @@ export default function HaikuPairApp() {
       const description = await generateHaigaAI(haiku, kigoVal);
       setGeneratedHaigaDescription(description);
     } catch (error) {
-      console.error('Haiga generation error:', error);
-      setGeneratedHaigaDescription('俳画の生成に失敗しました。もう一度お試しください。');
+      console.error("Haiga generation error:", error);
+      setGeneratedHaigaDescription(
+        "俳画の生成に失敗しました。もう一度お試しください。",
+      );
     } finally {
       setIsGeneratingHaiga(false);
     }
@@ -112,12 +135,17 @@ export default function HaikuPairApp() {
 
   // --- 共有カード ---
   const [showShareCard, setShowShareCard] = useState(false);
-  const [shareCardHaiku, setShareCardHaiku] = useState('');
-  const [shareCardKigo, setShareCardKigo] = useState('');
-  const [shareCardSeason, setShareCardSeason] = useState('');
-  const [shareCardAuthor, setShareCardAuthor] = useState('');
+  const [shareCardHaiku, setShareCardHaiku] = useState("");
+  const [shareCardKigo, setShareCardKigo] = useState("");
+  const [shareCardSeason, setShareCardSeason] = useState("");
+  const [shareCardAuthor, setShareCardAuthor] = useState("");
 
-  const openShareCard = (haiku: string, kigoVal: string, seasonVal: string, author = '') => {
+  const openShareCard = (
+    haiku: string,
+    kigoVal: string,
+    seasonVal: string,
+    author = "",
+  ) => {
     setShareCardHaiku(haiku);
     setShareCardKigo(kigoVal);
     setShareCardSeason(seasonVal);
@@ -128,14 +156,15 @@ export default function HaikuPairApp() {
   // --- 画像から季語 ---
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [imageAnalyzing, setImageAnalyzing] = useState(false);
-  const [imageSuggestions, setImageSuggestions] = useState<ImageSuggestions | null>(null);
+  const [imageSuggestions, setImageSuggestions] =
+    useState<ImageSuggestions | null>(null);
 
   const convertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        resolve(result.split(',')[1]);
+        resolve(result.split(",")[1]);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -150,24 +179,31 @@ export default function HaikuPairApp() {
       const parsed = await analyzeImage(base64Image, imageFile.type);
       setImageSuggestions(parsed);
     } catch (error) {
-      console.error('画像分析エラー:', error);
+      console.error("画像分析エラー:", error);
       setImageSuggestions({
-        season: '春',
-        kigo_suggestions: ['桜', '春風', '若葉'],
-        scene_description: '自然の風景が写っています',
-        haiku_hints: ['色彩に注目してみましょう', '音を想像してみましょう', '季節の移ろいを感じてみましょう'],
+        season: "春",
+        kigo_suggestions: ["桜", "春風", "若葉"],
+        scene_description: "自然の風景が写っています",
+        haiku_hints: [
+          "色彩に注目してみましょう",
+          "音を想像してみましょう",
+          "季節の移ろいを感じてみましょう",
+        ],
       });
     } finally {
       setImageAnalyzing(false);
     }
   };
 
-  const selectKigoFromImage = (selectedKigoVal: string, selectedSeason: string) => {
+  const selectKigoFromImage = (
+    selectedKigoVal: string,
+    selectedSeason: string,
+  ) => {
     setKigo(selectedKigoVal);
     setSeason(selectedSeason);
     setShowImageUpload(false);
-    setMode('session');
-    setRole('host');
+    setMode("session");
+    setRole("host");
     setSessionId(Math.random().toString(36).substring(2, 8).toUpperCase());
   };
 
@@ -175,7 +211,7 @@ export default function HaikuPairApp() {
   const [showAISuggest, setShowAISuggest] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
-  const [userIdea, setUserIdea] = useState('');
+  const [userIdea, setUserIdea] = useState("");
 
   const generateAISuggestions = async (idea: string, kigoVal: string) => {
     if (!idea.trim()) return;
@@ -187,7 +223,7 @@ export default function HaikuPairApp() {
       const suggestions = await generateHaikuSuggestions(idea, kigoVal);
       setAiSuggestions(suggestions);
     } catch (error) {
-      console.error('AI suggestion error:', error);
+      console.error("AI suggestion error:", error);
       setAiSuggestions([
         `${kigoVal}や　${idea}　心に残る`,
         `${idea}　${kigoVal}添えて　静かなり`,
@@ -199,40 +235,75 @@ export default function HaikuPairApp() {
   };
 
   // --- セッション操作 ---
-  const createSession = () => {
+  const createSession = async () => {
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
     const picked = pickRandomKigo();
 
     setSessionId(id);
     setKigo(picked.kigo);
     setSeason(picked.season);
-    setRole('host');
-    setMode('host');
+    setRole("host");
+    setMode("host");
 
     const data: SessionData = {
       id,
       kigo: picked.kigo,
       season: picked.season,
       host: userName,
-      hostHaiku: '',
-      guestHaiku: '',
+      hostHaiku: "",
+      guestHaiku: "",
       created: new Date().toISOString(),
     };
     setSessionData(data);
     saveSession(id, data);
+
+    // Supabase に保存（失敗してもUIは壊さない）
+    try {
+      const { error } = await supabase.from("sessions").insert({
+        code: id,
+        kigo: picked.kigo,
+        season: picked.season,
+      });
+
+      if (error) {
+        console.error("[Supabase] sessions insert failed:", error.message);
+      }
+    } catch (e) {
+      console.error("[Supabase] unexpected error:", e);
+    }
   };
 
-  const joinSession = (id: string) => {
+  const joinSession = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("code", id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[Supabase] joinSession select failed:", error.message);
+        // フォールバック
+      } else if (!data) {
+        console.warn("Session not found in DB");
+        alert("セッションが見つかりません");
+        return;
+      }
+    } catch (e) {
+      console.error("[Supabase] unexpected error during join:", e);
+    }
+
+    // 既存のlocalStorageロジック（DB確認成功 or Supabaseエラー時のフォールバック）
     const data = loadSession(id);
     if (data) {
       setSessionData(data);
       setSessionId(id);
       setKigo(data.kigo);
       setSeason(data.season);
-      setRole('guest');
-      setMode('session');
+      setRole("guest");
+      setMode("session");
     } else {
-      alert('セッションが見つかりません');
+      alert("セッションが見つかりません");
     }
   };
 
@@ -241,7 +312,7 @@ export default function HaikuPairApp() {
     if (sessionData) {
       const updated = {
         ...sessionData,
-        [role === 'host' ? 'hostHaiku' : 'guestHaiku']: myHaiku,
+        [role === "host" ? "hostHaiku" : "guestHaiku"]: myHaiku,
       };
       setSessionData(updated);
       saveSession(sessionId, updated);
@@ -252,7 +323,7 @@ export default function HaikuPairApp() {
   const checkPartnerHaiku = () => {
     const data = loadSession(sessionId);
     if (data) {
-      const partner = role === 'host' ? data.guestHaiku : data.hostHaiku;
+      const partner = role === "host" ? data.guestHaiku : data.hostHaiku;
       setPartnerHaiku(partner);
       setShowPartner(true);
     }
@@ -262,17 +333,17 @@ export default function HaikuPairApp() {
     const picked = pickRandomKigo();
     setKigo(picked.kigo);
     setSeason(picked.season);
-    setMode('simulation');
+    setMode("simulation");
   };
 
   const resetToHome = () => {
-    setMode('home');
-    setSessionId('');
-    setKigo('');
-    setSeason('');
-    setRole('');
-    setMyHaiku('');
-    setPartnerHaiku('');
+    setMode("home");
+    setSessionId("");
+    setKigo("");
+    setSeason("");
+    setRole("");
+    setMyHaiku("");
+    setPartnerHaiku("");
     setShowPartner(false);
     setSubmitted(false);
     setSessionData(null);
@@ -302,37 +373,34 @@ export default function HaikuPairApp() {
   // --- レンダー ---
   const renderScreen = () => {
     switch (mode) {
-      case 'home':
+      case "home":
         return (
           <HomeScreen
             userName={userName}
             onUserNameChange={setUserName}
             onCreateSession={createSession}
-            onJoin={() => setMode('join')}
+            onJoin={() => setMode("join")}
             onSimulation={startSimulation}
-            onGallery={() => setMode('gallery')}
-            onKigoDict={() => setMode('kigo_dict')}
+            onGallery={() => setMode("gallery")}
+            onKigoDict={() => setMode("kigo_dict")}
             onImageUpload={() => setShowImageUpload(true)}
           />
         );
-      case 'join':
+      case "join":
         return (
-          <JoinScreen
-            onJoin={joinSession}
-            onBack={() => setMode('home')}
-          />
+          <JoinScreen onJoin={joinSession} onBack={() => setMode("home")} />
         );
-      case 'host':
+      case "host":
         return (
           <HostScreen
             sessionId={sessionId}
             kigo={kigo}
             season={season}
-            onStartSession={() => setMode('session')}
+            onStartSession={() => setMode("session")}
             onCancel={resetToHome}
           />
         );
-      case 'session':
+      case "session":
         return (
           <SessionScreen
             sessionId={sessionId}
@@ -353,7 +421,7 @@ export default function HaikuPairApp() {
             onGenerateHaiga={generateHaiga}
             onSaveToHistory={saveToHistory}
             onGoHome={resetToHome}
-            onGoKigoDict={() => setMode('kigo_dict')}
+            onGoKigoDict={() => setMode("kigo_dict")}
             userIdea={userIdea}
             onUserIdeaChange={setUserIdea}
             onGenerateAISuggestions={generateAISuggestions}
@@ -364,7 +432,7 @@ export default function HaikuPairApp() {
             showVoteResult={showVoteResult}
           />
         );
-      case 'simulation':
+      case "simulation":
         return (
           <SimulationScreen
             kigo={kigo}
@@ -372,31 +440,27 @@ export default function HaikuPairApp() {
             onSaveToHistory={saveToHistory}
             onOpenShareCard={openShareCard}
             onRestartSimulation={startSimulation}
-            onGoHome={() => setMode('home')}
+            onGoHome={() => setMode("home")}
           />
         );
-      case 'gallery':
+      case "gallery":
         return (
           <GalleryScreen
             history={haikuHistory}
             onOpenShareCard={openShareCard}
             onGenerateHaiga={generateHaiga}
             onDeleteEntry={deleteFromHistory}
-            onGoHome={() => setMode('home')}
+            onGoHome={() => setMode("home")}
           />
         );
-      case 'kigo_dict':
-        return (
-          <KigoDictScreen
-            onGoHome={() => setMode('home')}
-          />
-        );
+      case "kigo_dict":
+        return <KigoDictScreen onGoHome={() => setMode("home")} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-100 to-amber-50 flex items-center justify-center p-4">
-      <div className={`max-w-2xl w-full ${fadeIn ? 'fade-in' : 'opacity-0'}`}>
+      <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>
         {renderScreen()}
 
         {/* モーダル群 */}
