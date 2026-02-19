@@ -259,14 +259,41 @@ export default function HaikuPairApp() {
 
     // Supabase に保存（失敗してもUIは壊さない）
     try {
-      const { error } = await supabase.from("sessions").insert({
-        code: id,
-        kigo: picked.kigo,
-        season: picked.season,
-      });
+      const { data: createdSession, error: sessionError } = await supabase
+        .from("sessions")
+        .insert({
+          code: id,
+          kigo: picked.kigo,
+          season: picked.season,
+        })
+        .select("id")
+        .single();
 
-      if (error) {
-        console.error("[Supabase] sessions insert failed:", error.message);
+      if (sessionError) {
+        console.error("[Supabase] sessions insert failed:", sessionError.message);
+        return;
+      }
+
+      // client_key の生成・取得
+      const clientKey =
+        localStorage.getItem("client_key") ?? crypto.randomUUID();
+      localStorage.setItem("client_key", clientKey);
+
+      // participants に host を insert
+      const { error: participantError } = await supabase
+        .from("participants")
+        .insert({
+          session_id: createdSession.id,
+          name: userName,
+          role: "host",
+          client_key: clientKey,
+        });
+
+      if (participantError) {
+        console.error(
+          "[Supabase] participants insert failed:",
+          participantError.message
+        );
       }
     } catch (e) {
       console.error("[Supabase] unexpected error:", e);
@@ -275,19 +302,55 @@ export default function HaikuPairApp() {
 
   const joinSession = async (id: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: session, error: sessionError } = await supabase
         .from("sessions")
         .select("*")
         .eq("code", id)
         .maybeSingle();
 
-      if (error) {
-        console.error("[Supabase] joinSession select failed:", error.message);
-        // フォールバック
-      } else if (!data) {
+      if (sessionError) {
+        console.error("[Supabase] joinSession select failed:", sessionError.message);
+        // フォールバック（localStorageへ続行）
+      } else if (!session) {
         console.warn("Session not found in DB");
         alert("セッションが見つかりません");
         return;
+      } else {
+        // 満席チェック：guest がすでに存在するか確認
+        const { data: existingGuest, error: guestCheckError } = await supabase
+          .from("participants")
+          .select("id")
+          .eq("session_id", session.id)
+          .eq("role", "guest")
+          .maybeSingle();
+
+        if (guestCheckError) {
+          console.error("[Supabase] guest check failed:", guestCheckError.message);
+        } else if (existingGuest) {
+          alert("満席です");
+          return;
+        } else {
+          // guest を insert
+          const clientKey =
+            localStorage.getItem("client_key") ?? crypto.randomUUID();
+          localStorage.setItem("client_key", clientKey);
+
+          const { error: participantError } = await supabase
+            .from("participants")
+            .insert({
+              session_id: session.id,
+              name: userName,
+              role: "guest",
+              client_key: clientKey,
+            });
+
+          if (participantError) {
+            console.error(
+              "[Supabase] participants insert failed:",
+              participantError.message
+            );
+          }
+        }
       }
     } catch (e) {
       console.error("[Supabase] unexpected error during join:", e);
