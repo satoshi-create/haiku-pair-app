@@ -49,6 +49,8 @@ export default function HaikuPairApp() {
   const [showPartner, setShowPartner] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [dbSessionId, setDbSessionId] = useState<string | null>(null);
+  const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
 
   // --- 句の履歴 ---
   const [haikuHistory, setHaikuHistory] = useState<HaikuHistoryEntry[]>([]);
@@ -56,6 +58,97 @@ export default function HaikuPairApp() {
   useEffect(() => {
     setHaikuHistory(loadHistory());
   }, []);
+
+  // --- Realtime: 相手の俳句を自動受信 ---
+  // useEffect(() => {
+  //   if (!dbSessionId || !myParticipantId) return;
+
+  //   const channel = supabase
+  //     .channel(`haiku-${dbSessionId}`)
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "*",
+  //         schema: "public",
+  //         table: "haikus",
+  //         filter: `session_id=eq.${dbSessionId}`,
+  //       },
+  //       (payload) => {
+  //         const newRow = payload.new as {
+  //           participant_id: string;
+  //           content: string;
+  //         };
+  //         if (newRow.participant_id !== myParticipantId) {
+  //           setPartnerHaiku(newRow.content);
+  //           setShowPartner(true);
+  //         }
+  //       },
+  //     )
+  //     .subscribe();
+
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [dbSessionId, myParticipantId]);
+
+  useEffect(() => {
+    console.log("🧩 Realtime effect triggered");
+    console.log("  dbSessionId:", dbSessionId);
+    console.log("  myParticipantId:", myParticipantId);
+
+    if (!dbSessionId || !myParticipantId) {
+      console.log("⏸ Realtime skipped: missing IDs");
+      return;
+    }
+
+    console.log("🚀 Subscribing to session:", dbSessionId);
+
+    const channel = supabase
+      .channel(`haiku-${dbSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "haikus",
+          filter: `session_id=eq.${dbSessionId}`,
+        },
+        (payload) => {
+          console.log("🔥 Realtime payload received:");
+          console.log("  eventType:", payload.eventType);
+          console.log("  full payload:", payload);
+
+          const newRow = payload.new as {
+            participant_id: string;
+            content: string;
+          };
+
+          console.log("  incoming participant_id:", newRow?.participant_id);
+          console.log("  myParticipantId:", myParticipantId);
+
+          if (!newRow?.participant_id) {
+            console.log("⚠️ No participant_id in payload");
+            return;
+          }
+
+          if (newRow.participant_id !== myParticipantId) {
+            console.log("✅ Partner update detected → updating UI");
+            setPartnerHaiku(newRow.content);
+            setShowPartner(true);
+          } else {
+            console.log("🙅 Self update ignored");
+          }
+        },
+      )
+      .subscribe((status) => {
+        console.log("📡 Realtime subscription status:", status);
+      });
+
+    return () => {
+      console.log("🧹 Cleaning up channel:", `haiku-${dbSessionId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [dbSessionId, myParticipantId]);
 
   const saveToHistory = (
     haiku: string,
@@ -270,9 +363,14 @@ export default function HaikuPairApp() {
         .single();
 
       if (sessionError) {
-        console.error("[Supabase] sessions insert failed:", sessionError.message);
+        console.error(
+          "[Supabase] sessions insert failed:",
+          sessionError.message,
+        );
         return;
       }
+
+      setDbSessionId(createdSession.id);
 
       // client_key の生成・取得
       const clientKey =
@@ -280,20 +378,25 @@ export default function HaikuPairApp() {
       localStorage.setItem("client_key", clientKey);
 
       // participants に host を insert
-      const { error: participantError } = await supabase
-        .from("participants")
-        .insert({
-          session_id: createdSession.id,
-          name: userName,
-          role: "host",
-          client_key: clientKey,
-        });
+      const { data: createdParticipant, error: participantError } =
+        await supabase
+          .from("participants")
+          .insert({
+            session_id: createdSession.id,
+            name: userName,
+            role: "host",
+            client_key: clientKey,
+          })
+          .select("id")
+          .single();
 
       if (participantError) {
         console.error(
           "[Supabase] participants insert failed:",
-          participantError.message
+          participantError.message,
         );
+      } else if (createdParticipant) {
+        setMyParticipantId(createdParticipant.id);
       }
     } catch (e) {
       console.error("[Supabase] unexpected error:", e);
@@ -309,7 +412,10 @@ export default function HaikuPairApp() {
         .maybeSingle();
 
       if (sessionError) {
-        console.error("[Supabase] joinSession select failed:", sessionError.message);
+        console.error(
+          "[Supabase] joinSession select failed:",
+          sessionError.message,
+        );
         // フォールバック（localStorageへ続行）
       } else if (!session) {
         console.warn("Session not found in DB");
@@ -325,30 +431,40 @@ export default function HaikuPairApp() {
           .maybeSingle();
 
         if (guestCheckError) {
-          console.error("[Supabase] guest check failed:", guestCheckError.message);
+          console.error(
+            "[Supabase] guest check failed:",
+            guestCheckError.message,
+          );
         } else if (existingGuest) {
           alert("満席です");
           return;
         } else {
+          setDbSessionId(session.id);
+
           // guest を insert
           const clientKey =
             localStorage.getItem("client_key") ?? crypto.randomUUID();
           localStorage.setItem("client_key", clientKey);
 
-          const { error: participantError } = await supabase
-            .from("participants")
-            .insert({
-              session_id: session.id,
-              name: userName,
-              role: "guest",
-              client_key: clientKey,
-            });
+          const { data: insertedParticipant, error: participantError } =
+            await supabase
+              .from("participants")
+              .insert({
+                session_id: session.id,
+                name: userName,
+                role: "guest",
+                client_key: clientKey,
+              })
+              .select("id")
+              .single();
 
           if (participantError) {
             console.error(
               "[Supabase] participants insert failed:",
-              participantError.message
+              participantError.message,
             );
+          } else if (insertedParticipant) {
+            setMyParticipantId(insertedParticipant.id);
           }
         }
       }
@@ -370,8 +486,10 @@ export default function HaikuPairApp() {
     }
   };
 
-  const submitHaiku = () => {
+  const submitHaiku = async () => {
     if (!myHaiku.trim()) return;
+
+    // 既存のlocalStorageロジック（UIは先に更新）
     if (sessionData) {
       const updated = {
         ...sessionData,
@@ -381,9 +499,105 @@ export default function HaikuPairApp() {
       saveSession(sessionId, updated);
       setSubmitted(true);
     }
+
+    // Supabase に保存（失敗してもUIは壊さない）
+    try {
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("code", sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        console.error(
+          "[Supabase] submitHaiku: session fetch failed:",
+          sessionError?.message,
+        );
+        return;
+      }
+
+      const { data: participant, error: participantError } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("session_id", session.id)
+        .eq("role", role)
+        .single();
+
+      if (participantError || !participant) {
+        console.error(
+          "[Supabase] submitHaiku: participant fetch failed:",
+          participantError?.message,
+        );
+        return;
+      }
+
+      const { error: upsertError } = await supabase.from("haikus").upsert(
+        {
+          session_id: session.id,
+          participant_id: participant.id,
+          content: myHaiku,
+          submitted_at: new Date().toISOString(),
+        },
+        { onConflict: "session_id,participant_id" },
+      );
+
+      if (upsertError) {
+        console.error("[Supabase] haikus upsert failed:", upsertError.message);
+      }
+    } catch (e) {
+      console.error("[Supabase] unexpected error in submitHaiku:", e);
+    }
   };
 
-  const checkPartnerHaiku = () => {
+  const checkPartnerHaiku = async () => {
+    try {
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("code", sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        throw new Error(sessionError?.message ?? "session not found");
+      }
+
+      const partnerRole = role === "host" ? "guest" : "host";
+
+      const { data: partner, error: partnerError } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("session_id", session.id)
+        .eq("role", partnerRole)
+        .single();
+
+      if (partnerError || !partner) {
+        throw new Error(partnerError?.message ?? "partner not found");
+      }
+
+      const { data: haiku, error: haikuError } = await supabase
+        .from("haikus")
+        .select("*")
+        .eq("session_id", session.id)
+        .eq("participant_id", partner.id)
+        .maybeSingle();
+
+      if (haikuError) {
+        throw new Error(haikuError.message);
+      }
+
+      // Supabase 成功 — localStorageフォールバック不要
+      if (haiku) {
+        setPartnerHaiku(haiku.content);
+        setShowPartner(true);
+      } else {
+        alert("まだ提出されていません");
+      }
+      return;
+    } catch (e) {
+      console.error("[Supabase] checkPartnerHaiku failed:", e);
+    }
+
+    // Supabaseエラー時のみlocalStorageフォールバック
     const data = loadSession(sessionId);
     if (data) {
       const partner = role === "host" ? data.guestHaiku : data.hostHaiku;
@@ -413,6 +627,8 @@ export default function HaikuPairApp() {
     setMyVote(null);
     setPartnerVote(null);
     setShowVoteResult(false);
+    setDbSessionId(null);
+    setMyParticipantId(null);
   };
 
   // --- フェードインアニメーション ---
