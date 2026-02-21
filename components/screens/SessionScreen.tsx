@@ -31,6 +31,7 @@ interface SessionScreenProps {
   myVote: string | null;
   partnerVote: string | null;
   showVoteResult: boolean;
+  hasVoted: boolean;
 }
 
 export default function SessionScreen({
@@ -61,8 +62,10 @@ export default function SessionScreen({
   myVote,
   partnerVote,
   showVoteResult,
+  hasVoted,
 }: SessionScreenProps) {
   // タイマー機能（セッション画面ローカル）
+  const [showDialogueMode, setShowDialogueMode] = useState(false);
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState(10);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -331,8 +334,15 @@ export default function SessionScreen({
                   )}
                 </div>
 
+                {/* 投票済み表示 */}
+                {hasVoted && (
+                  <div className="mt-6 pt-6 border-t border-stone-200 text-center text-sm text-green-700 bg-green-50 rounded-lg py-3">
+                    ✓ 選句しました（DB保存済み）
+                  </div>
+                )}
+
                 {/* 選句・投票セクション */}
-                {partnerHaiku && myHaiku && submitted && (
+                {partnerHaiku && myHaiku && submitted && !hasVoted && (
                   <div className="mt-6 pt-6 border-t border-stone-200">
                     <h4 className="text-sm font-bold text-stone-700 mb-4 text-center">
                       🗳️ 選句タイム
@@ -437,6 +447,28 @@ export default function SessionScreen({
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* 対話ナッジ */}
+                {partnerHaiku && myHaiku && submitted && (
+                  <>
+                    {!showDialogueMode ? (
+                      <button
+                        onClick={() => setShowDialogueMode(true)}
+                        className="mt-6 w-full bg-indigo-600 text-white text-lg py-4 rounded-xl hover:bg-indigo-700"
+                      >
+                        💬 この2句について話してみる
+                      </button>
+                    ) : (
+                      <div className="mt-6 bg-indigo-50 p-4 rounded-xl text-lg">
+                        🌿 対話モード
+                        <br />
+                        ・どの言葉が印象に残りましたか？
+                        <br />
+                        ・情景はどこですか？
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <button

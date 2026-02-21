@@ -179,6 +179,7 @@ export default function HaikuPairApp() {
   const [myVote, setMyVote] = useState<string | null>(null);
   const [partnerVote, setPartnerVote] = useState<string | null>(null);
   const [showVoteResult, setShowVoteResult] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
   const submitVote = (vote: string) => {
     setMyVote(vote);
@@ -190,6 +191,52 @@ export default function HaikuPairApp() {
       setSessionData(updated);
       saveSession(sessionId, updated);
     }
+  };
+
+  const handleVote = async (votedFor: "self" | "partner") => {
+    if (!dbSessionId || !myParticipantId) {
+      console.error("[Supabase] handleVote: dbSessionId or myParticipantId missing");
+      return;
+    }
+
+    try {
+      let targetId: string = myParticipantId;
+
+      if (votedFor === "partner") {
+        const { data: partnerParticipant, error: partnerError } = await supabase
+          .from("participants")
+          .select("id")
+          .eq("session_id", dbSessionId)
+          .neq("id", myParticipantId)
+          .single();
+
+        if (partnerError || !partnerParticipant) {
+          console.error("[Supabase] handleVote: partner fetch failed:", partnerError?.message);
+          return;
+        }
+        targetId = partnerParticipant.id;
+      }
+
+      const { error: voteError } = await supabase.from("votes").insert({
+        session_id: dbSessionId,
+        voter_id: myParticipantId,
+        voted_for_id: targetId,
+      });
+
+      if (voteError) {
+        console.error("[Supabase] votes insert failed:", voteError.message);
+      } else {
+        setHasVoted(true);
+      }
+    } catch (e) {
+      console.error("[Supabase] unexpected error in handleVote:", e);
+    }
+  };
+
+  // localStorage + Supabase の両方に投票を保存する
+  const handleVoteCombined = (vote: string) => {
+    submitVote(vote);
+    handleVote(vote === "mine" ? "self" : "partner");
   };
 
   const checkPartnerVote = () => {
@@ -252,15 +299,32 @@ export default function HaikuPairApp() {
   const [imageSuggestions, setImageSuggestions] =
     useState<ImageSuggestions | null>(null);
 
-  const convertToBase64 = (file: File): Promise<string> => {
+  // 画像をキャンバスでリサイズして base64 に変換（大容量写真による4MBボディ制限超過を防ぐ）
+  const resizeAndEncodeImage = (
+    file: File,
+    maxSide = 1024,
+  ): Promise<{ data: string; mediaType: string }> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        resolve(result.split(",")[1]);
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ data: dataUrl.split(",")[1], mediaType: "image/jpeg" });
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+
+      img.onerror = reject;
+      img.src = url;
     });
   };
 
@@ -268,8 +332,8 @@ export default function HaikuPairApp() {
     setImageAnalyzing(true);
 
     try {
-      const base64Image = await convertToBase64(imageFile);
-      const parsed = await analyzeImage(base64Image, imageFile.type);
+      const { data, mediaType } = await resizeAndEncodeImage(imageFile);
+      const parsed = await analyzeImage(data, mediaType);
       setImageSuggestions(parsed);
     } catch (error) {
       console.error("画像分析エラー:", error);
@@ -629,6 +693,7 @@ export default function HaikuPairApp() {
     setShowVoteResult(false);
     setDbSessionId(null);
     setMyParticipantId(null);
+    setHasVoted(false);
   };
 
   // --- フェードインアニメーション ---
@@ -704,11 +769,12 @@ export default function HaikuPairApp() {
             userIdea={userIdea}
             onUserIdeaChange={setUserIdea}
             onGenerateAISuggestions={generateAISuggestions}
-            onSubmitVote={submitVote}
+            onSubmitVote={handleVoteCombined}
             onCheckPartnerVote={checkPartnerVote}
             myVote={myVote}
             partnerVote={partnerVote}
             showVoteResult={showVoteResult}
+            hasVoted={hasVoted}
           />
         );
       case "simulation":
