@@ -36,26 +36,38 @@ export default function ImageUploadModal({
 
         {!suggestions ? (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center">
-              <p className="text-stone-500 mb-4">写真をアップロードしてください</p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    onFileSelect(file);
-                  }
-                }}
-                className="w-full"
-              />
-            </div>
-
-            {isAnalyzing && (
-              <div className="text-center py-4">
-                <div className="text-stone-400 animate-pulse">写真を分析しています...</div>
-              </div>
-            )}
+            {/* 隠し input + label でエリア全体をタップ可能にする */}
+            <label
+              htmlFor="image-upload-input"
+              className={`block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isAnalyzing
+                  ? "border-stone-200 bg-stone-50 pointer-events-none"
+                  : "border-stone-300 hover:border-indigo-400 hover:bg-indigo-50"
+              }`}
+            >
+              {isAnalyzing ? (
+                <div className="space-y-2">
+                  <p className="text-2xl animate-pulse">🔍</p>
+                  <p className="text-stone-400 animate-pulse">写真を分析しています...</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-4xl">📷</p>
+                  <p className="text-stone-700 font-medium">写真をタップして選択</p>
+                  <p className="text-stone-400 text-xs">JPG / PNG / HEIC など</p>
+                </div>
+              )}
+            </label>
+            <input
+              id="image-upload-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onFileSelect(file);
+              }}
+            />
           </div>
         ) : (
           <div className="space-y-4 slide-in">
