@@ -9,10 +9,11 @@ import { saveSession, loadSession, loadHistory, saveHistory } from '@/lib/storag
 import HomeScreen from '@/components/screens/HomeScreen';
 import JoinScreen from '@/components/screens/JoinScreen';
 import HostScreen from '@/components/screens/HostScreen';
-import SessionScreen from '@/components/screens/SessionScreen';
-import SimulationScreen from '@/components/screens/SimulationScreen';
+import SessionScreen from '@/components/screens/SessionScreen'; // 保持（削除不可）
+import SimulationScreen from '@/components/screens/SimulationScreen'; // 保持（削除不可）
 import GalleryScreen from '@/components/screens/GalleryScreen';
-import KigoDictScreen from '@/components/screens/KigoDictScreen';
+import KigoDictScreen from '@/components/screens/KigoDictScreen'; // 保持（削除不可）
+import ComposeScreen from '@/components/screens/ComposeScreen';
 
 import AISuggestModal from '@/components/modals/AISuggestModal';
 import HaigaModal from '@/components/modals/HaigaModal';
@@ -143,6 +144,8 @@ ${haiku}
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [imageAnalyzing, setImageAnalyzing] = useState(false);
   const [imageSuggestions, setImageSuggestions] = useState<ImageSuggestions | null>(null);
+  /** 写真プレビュー URL（ComposeScreen に渡す） */
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const convertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -157,6 +160,7 @@ ${haiku}
   };
 
   const analyzeImageForHaiku = async (imageFile: File) => {
+    setImagePreviewUrl(URL.createObjectURL(imageFile));
     setImageAnalyzing(true);
 
     try {
@@ -213,7 +217,7 @@ ${haiku}
     if (!idea.trim()) return;
 
     setIsGeneratingSuggestions(true);
-    setShowAISuggest(true);
+    // ComposeScreen がインライン表示するためモーダルは開かない
 
     try {
       const data = await callAI(
@@ -329,6 +333,9 @@ ${idea}
     setMyVote(null);
     setPartnerVote(null);
     setShowVoteResult(false);
+    setImagePreviewUrl(null);
+    setImageSuggestions(null);
+    setAiSuggestions([]);
   };
 
   // --- フェードインアニメーション ---
@@ -384,34 +391,23 @@ ${idea}
         );
       case 'session':
         return (
-          <SessionScreen
-            sessionId={sessionId}
-            role={role}
-            userName={userName}
+          <ComposeScreen
             kigo={kigo}
             season={season}
+            imagePreviewUrl={imagePreviewUrl}
+            isAnalyzing={imageAnalyzing}
+            onFileSelect={analyzeImageForHaiku}
+            imageSuggestions={imageSuggestions}
             myHaiku={myHaiku}
             onMyHaikuChange={setMyHaiku}
             onSubmitHaiku={submitHaiku}
-            onCheckPartner={checkPartnerHaiku}
-            partnerHaiku={partnerHaiku}
-            showPartner={showPartner}
-            onClosePartner={() => setShowPartner(false)}
             submitted={submitted}
-            onSetSubmitted={setSubmitted}
-            onOpenShareCard={openShareCard}
-            onGenerateHaiga={generateHaiga}
-            onSaveToHistory={saveToHistory}
-            onGoHome={resetToHome}
-            onGoKigoDict={() => setMode('kigo_dict')}
             userIdea={userIdea}
             onUserIdeaChange={setUserIdea}
             onGenerateAISuggestions={generateAISuggestions}
-            onSubmitVote={submitVote}
-            onCheckPartnerVote={checkPartnerVote}
-            myVote={myVote}
-            partnerVote={partnerVote}
-            showVoteResult={showVoteResult}
+            aiSuggestions={aiSuggestions}
+            isGeneratingSuggestions={isGeneratingSuggestions}
+            onGoHome={resetToHome}
           />
         );
       case 'simulation':

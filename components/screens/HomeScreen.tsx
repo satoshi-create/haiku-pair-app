@@ -59,6 +59,7 @@ export default function HomeScreen({
             </button>
           </div>
 
+          {/* [非表示] シミュレーションモード — 高齢者向け導線簡素化のため非表示
           <div className="pt-4 border-t border-stone-200">
             <button
               onClick={onSimulation}
@@ -70,6 +71,7 @@ export default function HomeScreen({
               一人で芭蕉と蕪村を演じてペア体験
             </p>
           </div>
+          */}
 
           <div className="pt-4 border-t border-stone-200">
             <button
@@ -83,6 +85,7 @@ export default function HomeScreen({
             </p>
           </div>
 
+          {/* [非表示] 季語辞典 — 高齢者向け導線簡素化のため非表示
           <div className="pt-4 border-t border-stone-200">
             <button
               onClick={onKigoDict}
@@ -94,7 +97,9 @@ export default function HomeScreen({
               季語の意味と例句を調べる
             </p>
           </div>
+          */}
 
+          {/* [非表示] 写真から季語を探す — 高齢者向け導線簡素化のため非表示
           <div className="pt-4 border-t border-stone-200">
             <button
               onClick={onImageUpload}
@@ -106,6 +111,7 @@ export default function HomeScreen({
               写真をAIが分析して季語を提案
             </p>
           </div>
+          */}
         </div>
       </div>
     </div>
