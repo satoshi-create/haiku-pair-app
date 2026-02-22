@@ -1,0 +1,102 @@
+# === Project Identity ===
+This project is "Haiku Pair MVP".
+Goal: Family-use haiku co-creation app for cognitive rehabilitation.
+Target: Stable, minimal, non-overengineered MVP.
+
+# === Core Philosophy ===
+- Stability > Perfection
+- Minimal DB usage (sessions + participants only at MVP stage)
+- Do NOT over-abstract.
+- Do NOT introduce authentication.
+- Do NOT add unnecessary libraries.
+- Avoid premature optimization.
+- Keep UI senior-friendly (large text, simple flow).
+
+# === Tech Stack ===
+Framework: Next.js 14 (App Router)
+Language: TypeScript
+Styling: Tailwind CSS
+Database: Supabase (minimal usage)
+AI: OpenAI (GPT-4o-mini)
+Deployment: Vercel
+
+# === Architecture Rules ===
+
+## 1. AI Layer
+- All AI calls must be isolated under /lib/ai
+- UI must never directly call OpenAI
+- API route must be /app/api/ai/route.ts
+- AI must return JSON
+- Add try/catch around all AI calls
+
+## 2. Supabase Rules (MVP stage)
+- Only use tables:
+  - sessions
+  - participants
+- Do NOT introduce haikus or votes DB yet unless explicitly requested
+- localStorage must remain for transient state
+- Insert only on:
+  - createSession (host)
+  - joinSession (guest)
+- Never break existing UI flow
+
+## 3. Participants Design
+- participants is NOT user auth
+- participants is seat management
+- role: 'host' | 'guest'
+- Use client_key stored in localStorage
+- Enforce 1 host and 1 guest per session
+- Fail gracefully (console.error only)
+
+## 4. State Management
+- Keep React state simple
+- Avoid context/global state unless required
+- Do NOT refactor to Redux/Zustand
+- Do NOT add server actions unless explicitly requested
+
+## 5. UI Constraints (Senior Friendly)
+- Minimum text size: text-lg
+- Clear call-to-action buttons
+- Avoid modal nesting
+- Avoid multi-step hidden logic
+- Always show next action guidance
+
+## 6. Error Handling
+- Never crash UI
+- Log errors in console
+- Use simple alert() for MVP if needed
+- Do not implement complex toast systems
+
+## 7. Realtime
+- Do NOT implement Realtime yet
+- Only allow simple polling if requested
+- Realtime will be introduced later
+
+# === Development Rules ===
+
+When modifying code:
+- Output only changed files
+- Keep diffs minimal
+- Do not rewrite unrelated parts
+- Explain why changes are made
+- Always include manual test steps
+
+# === Forbidden Actions ===
+- Do NOT add authentication
+- Do NOT add RLS policies unless requested
+- Do NOT redesign folder structure
+- Do NOT introduce new UI frameworks
+- Do NOT migrate state to DB entirely
+- Do NOT optimize prematurely
+
+# === Performance Constraints ===
+- Avoid unnecessary re-renders
+- Avoid multiple Supabase calls per render
+- Use async/await properly
+- Never block UI thread
+
+# === Communication Style ===
+- Be concise
+- Explain architecture decisions
+- Prioritize safety
+- Preserve MVP simplicity
