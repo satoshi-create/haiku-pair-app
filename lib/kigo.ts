@@ -19,6 +19,30 @@ export function pickRandomKigo(): { kigo: string; season: string } {
   return { kigo, season: getSeasonForKigo(kigo) };
 }
 
+/** 月ごとの季語リスト（1〜12月、すべて kigoDatabase に存在するもの） */
+export const 月別季語: Record<number, string[]> = {
+  1:  ['雪', '寒月', '冬木立', '霜', '氷'],
+  2:  ['北風', '時雨', '冬晴', '枯野', '霜'],
+  3:  ['春風', '霞', '春雨', '朧月', '花冷え'],
+  4:  ['桜', '菜の花', '花冷え', '春雨', '霞'],
+  5:  ['青葉', '蛙', '雲雀', '菜の花', '春風'],
+  6:  ['五月雨', '蛍', '青葉', '青嵐', '涼風'],
+  7:  ['蝉', '夏雲', '夕立', '虹', '青嵐'],
+  8:  ['蝉', '夕立', '涼風', '夏雲', '虹'],
+  9:  ['秋風', '月', '露', '秋雨', '天高し'],
+  10: ['紅葉', '月', '虫', '露', '霧'],
+  11: ['紅葉', '稲', '霧', '秋雨', '虫'],
+  12: ['雪', '冬木立', '時雨', '寒月', '北風'],
+};
+
+/** 現在の月に応じてランダムに季語を1つ選ぶ */
+export function pickMonthlyKigo(): { kigo: string; season: string } {
+  const month = new Date().getMonth() + 1; // 1〜12
+  const list = 月別季語[month] ?? 全季語;
+  const kigo = list[Math.floor(Math.random() * list.length)];
+  return { kigo, season: getSeasonForKigo(kigo) };
+}
+
 export const kigoDatabase: Record<string, KigoEntry> = {
   // 春
   '春風': { season: '春', description: '春に吹く穏やかな風。暖かく心地よい風を指す。', examples: ['春風や　闘志抱きて　丘に立つ　（高浜虚子）'] },

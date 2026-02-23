@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ScreenMode, SessionData, HaikuHistoryEntry, ImageSuggestions } from '@/lib/types';
-import { pickRandomKigo } from '@/lib/kigo';
+import { pickRandomKigo, pickMonthlyKigo } from '@/lib/kigo';
 import { callAI } from '@/lib/api';
 import { saveSession, loadSession, loadHistory, saveHistory } from '@/lib/storage';
 
@@ -255,7 +255,7 @@ ${idea}
   // --- セッション操作 ---
   const createSession = () => {
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const picked = pickRandomKigo();
+    const picked = pickMonthlyKigo();
 
     setSessionId(id);
     setKigo(picked.kigo);
