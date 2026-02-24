@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { kigoDatabase, searchKigo } from '@/lib/kigo';
 
 interface KigoDictScreenProps {
-  onGoHome: () => void;
+  onClose: () => void;
 }
 
-export default function KigoDictScreen({ onGoHome }: KigoDictScreenProps) {
+export default function KigoDictScreen({ onClose }: KigoDictScreenProps) {
   const [selectedKigo, setSelectedKigo] = useState<string | null>(null);
   const [kigoSearchQuery, setKigoSearchQuery] = useState('');
 
@@ -92,10 +92,10 @@ export default function KigoDictScreen({ onGoHome }: KigoDictScreenProps) {
 
         <div className="mt-6 pt-4 border-t border-stone-200">
           <button
-            onClick={onGoHome}
+            onClick={onClose}
             className="w-full text-sm text-stone-600 hover:text-stone-800"
           >
-            ホームに戻る
+            閉じる
           </button>
         </div>
       </div>

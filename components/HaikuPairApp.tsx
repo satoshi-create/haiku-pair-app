@@ -25,18 +25,18 @@ import GalleryScreen from "@/components/screens/GalleryScreen";
 import HomeScreen from "@/components/screens/HomeScreen";
 import HostScreen from "@/components/screens/HostScreen";
 import JoinScreen from "@/components/screens/JoinScreen";
-import KigoDictScreen from "@/components/screens/KigoDictScreen";
 import SessionScreen from "@/components/screens/SessionScreen";
-import SimulationScreen from "@/components/screens/SimulationScreen";
 
 import AISuggestModal from "@/components/modals/AISuggestModal";
 import HaigaModal from "@/components/modals/HaigaModal";
-import ImageUploadModal from "@/components/modals/ImageUploadModal";
 import ShareCardModal from "@/components/modals/ShareCardModal";
 
 export default function HaikuPairApp() {
   // --- 画面モード ---
   const [mode, setMode] = useState<ScreenMode>("home");
+
+  // --- セッション内ステップ（5ステップウィザード） ---
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // --- セッション状態 ---
   const [sessionId, setSessionId] = useState("");
@@ -293,8 +293,7 @@ export default function HaikuPairApp() {
     setShowShareCard(true);
   };
 
-  // --- 画像から季語 ---
-  const [showImageUpload, setShowImageUpload] = useState(false);
+  // --- 画像から季語（セッション画面内で利用） ---
   const [imageAnalyzing, setImageAnalyzing] = useState(false);
   const [imageSuggestions, setImageSuggestions] =
     useState<ImageSuggestions | null>(null);
@@ -350,18 +349,6 @@ export default function HaikuPairApp() {
     } finally {
       setImageAnalyzing(false);
     }
-  };
-
-  const selectKigoFromImage = (
-    selectedKigoVal: string,
-    selectedSeason: string,
-  ) => {
-    setKigo(selectedKigoVal);
-    setSeason(selectedSeason);
-    setShowImageUpload(false);
-    setMode("session");
-    setRole("host");
-    setSessionId(Math.random().toString(36).substring(2, 8).toUpperCase());
   };
 
   // --- AI句提案 ---
@@ -545,6 +532,7 @@ export default function HaikuPairApp() {
       setSeason(data.season);
       setRole("guest");
       setMode("session");
+      setActiveStep(1);
     } else {
       alert("セッションが見つかりません");
     }
@@ -670,13 +658,6 @@ export default function HaikuPairApp() {
     }
   };
 
-  const startSimulation = () => {
-    const picked = pickRandomKigo();
-    setKigo(picked.kigo);
-    setSeason(picked.season);
-    setMode("simulation");
-  };
-
   const resetToHome = () => {
     setMode("home");
     setSessionId("");
@@ -694,6 +675,7 @@ export default function HaikuPairApp() {
     setDbSessionId(null);
     setMyParticipantId(null);
     setHasVoted(false);
+    setActiveStep(1);
   };
 
   // --- フェードインアニメーション ---
@@ -724,10 +706,7 @@ export default function HaikuPairApp() {
             onUserNameChange={setUserName}
             onCreateSession={createSession}
             onJoin={() => setMode("join")}
-            onSimulation={startSimulation}
             onGallery={() => setMode("gallery")}
-            onKigoDict={() => setMode("kigo_dict")}
-            onImageUpload={() => setShowImageUpload(true)}
           />
         );
       case "join":
@@ -740,7 +719,10 @@ export default function HaikuPairApp() {
             sessionId={sessionId}
             kigo={kigo}
             season={season}
-            onStartSession={() => setMode("session")}
+            onStartSession={() => {
+              setActiveStep(1);
+              setMode("session");
+            }}
             onCancel={resetToHome}
           />
         );
@@ -765,7 +747,7 @@ export default function HaikuPairApp() {
             onGenerateHaiga={generateHaiga}
             onSaveToHistory={saveToHistory}
             onGoHome={resetToHome}
-            onGoKigoDict={() => setMode("kigo_dict")}
+            onGoKigoDict={() => {}}
             userIdea={userIdea}
             onUserIdeaChange={setUserIdea}
             onGenerateAISuggestions={generateAISuggestions}
@@ -775,17 +757,14 @@ export default function HaikuPairApp() {
             partnerVote={partnerVote}
             showVoteResult={showVoteResult}
             hasVoted={hasVoted}
-          />
-        );
-      case "simulation":
-        return (
-          <SimulationScreen
-            kigo={kigo}
-            season={season}
-            onSaveToHistory={saveToHistory}
-            onOpenShareCard={openShareCard}
-            onRestartSimulation={startSimulation}
-            onGoHome={() => setMode("home")}
+            // 5ステップウィザード制御
+            activeStep={activeStep}
+            onStepChange={setActiveStep}
+            // 写真解析（画面内で利用）
+            imageAnalyzing={imageAnalyzing}
+            imageSuggestions={imageSuggestions}
+            onImageFileSelect={analyzeImageForHaiku}
+            onResetImageSuggestions={() => setImageSuggestions(null)}
           />
         );
       case "gallery":
@@ -798,8 +777,6 @@ export default function HaikuPairApp() {
             onGoHome={() => setMode("home")}
           />
         );
-      case "kigo_dict":
-        return <KigoDictScreen onGoHome={() => setMode("home")} />;
     }
   };
 
@@ -837,18 +814,6 @@ export default function HaikuPairApp() {
           onClose={() => setShowShareCard(false)}
         />
 
-        <ImageUploadModal
-          show={showImageUpload}
-          isAnalyzing={imageAnalyzing}
-          suggestions={imageSuggestions}
-          onFileSelect={analyzeImageForHaiku}
-          onSelectKigo={selectKigoFromImage}
-          onReset={() => setImageSuggestions(null)}
-          onClose={() => {
-            setShowImageUpload(false);
-            setImageSuggestions(null);
-          }}
-        />
       </div>
     </div>
   );

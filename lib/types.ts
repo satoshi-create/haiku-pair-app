@@ -1,4 +1,4 @@
-export type ScreenMode = 'home' | 'join' | 'host' | 'session' | 'simulation' | 'gallery' | 'kigo_dict';
+export type ScreenMode = 'home' | 'join' | 'host' | 'session' | 'gallery';
 
 export interface SessionData {
   id: string;
