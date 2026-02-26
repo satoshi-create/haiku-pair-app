@@ -46,6 +46,10 @@ interface SessionScreenProps {
   } | null;
   onImageFileSelect: (file: File) => void;
   onResetImageSuggestions: () => void;
+  onConfirmKigoFromPhoto: (kigo: string, season: string) => void;
+  onSelectKigoFromDict: (kigo: string, season: string) => void;
+  hostViewingKigoDict?: boolean;
+  onKigoDictOpenChange?: (open: boolean) => void;
 }
 
 export default function SessionScreen({
@@ -83,10 +87,15 @@ export default function SessionScreen({
   imageSuggestions,
   onImageFileSelect,
   onResetImageSuggestions,
+  onConfirmKigoFromPhoto,
+  onSelectKigoFromDict,
+  hostViewingKigoDict = false,
+  onKigoDictOpenChange,
 }: SessionScreenProps) {
   const [showKigoDict, setShowKigoDict] = useState(false);
 
   const stepLabel = (step: 1 | 2 | 3 | 4 | 5) => {
+    if (step === 1 && role === 'guest') return 'ホストのお題を待つ';
     switch (step) {
       case 1:
         return '写真を撮る';
@@ -137,52 +146,136 @@ export default function SessionScreen({
 
     switch (activeStep) {
       case 1:
+        if (role === 'guest') {
+          return (
+            <div className="space-y-6">
+              <div className="bg-white/80 rounded-2xl p-8 border border-stone-200">
+                {!kigo || !kigo.trim() ? (
+                  <>
+                    <p className="text-2xl font-semibold text-stone-800 mb-3 text-center">
+                      お題が決まるまでお待ちください
+                    </p>
+                    <p className="text-xl text-stone-600 text-center mb-2">ホストがお題を探しています…</p>
+                    <p className="text-lg text-stone-500 text-center">しばらくお待ちください。</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-semibold text-stone-800 mb-2 text-center">今日のお題</p>
+                    <p className="text-3xl font-bold text-stone-800 mb-1 text-center">{kigo}</p>
+                    <p className="text-xl text-stone-500 text-center">（{season}）</p>
+                  </>
+                )}
+              </div>
+              {kigo && kigo.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onStepChange(2)}
+                  className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700"
+                >
+                  次へ
+                </button>
+              )}
+            </div>
+          );
+        }
         return (
           <div className="space-y-6">
             <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
-              <p className="text-xl text-stone-700 mb-4">
-                朝の散歩で撮った一枚をえらび、そこから一句をはじめてみましょう。
-              </p>
-              <label
-                htmlFor="haiku-image-input"
-                className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
-                  imageAnalyzing
-                    ? 'border-stone-200 bg-stone-50'
-                    : 'border-stone-300 hover:border-stone-500 hover:bg-stone-50'
-                }`}
-              >
-                {imageAnalyzing ? (
-                  <div>
-                    <p className="text-4xl mb-2">🔍</p>
-                    <p className="text-xl text-stone-500">写真を分析しています…</p>
+              {!imageSuggestions ? (
+                <>
+                  <label
+                    htmlFor="haiku-image-input"
+                    className={`block border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors ${
+                      imageAnalyzing
+                        ? 'border-stone-200 bg-stone-50'
+                        : 'border-stone-400 hover:border-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    <input
+                      id="haiku-image-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onResetImageSuggestions();
+                          onImageFileSelect(file);
+                        }
+                      }}
+                    />
+                    {imageAnalyzing ? (
+                      <div>
+                        <p className="text-4xl mb-2">🔍</p>
+                        <p className="text-xl text-stone-500">写真を分析しています…</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-5xl mb-3">📸</p>
+                        <p className="text-2xl font-semibold text-stone-800 mb-1">写真から季語を見つける</p>
+                        <p className="text-lg text-stone-500">ここを押して写真を選んでください</p>
+                      </div>
+                    )}
+                  </label>
+                  <p className="text-center mt-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onKigoDictOpenChange?.(true);
+                        setShowKigoDict(true);
+                      }}
+                      className="text-xl text-stone-500 hover:text-stone-700 underline underline-offset-2"
+                    >
+                      写真がない場合は 季語辞典から選ぶ
+                    </button>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl text-stone-700 mb-4">写真からこんな季語が提案されました。</p>
+                  <p className="text-lg text-stone-700 mb-4">{imageSuggestions.scene_description}</p>
+                  <p className="text-xl font-semibold text-stone-800 mb-3">
+                    提案された季語（{imageSuggestions.season}）からお題を選ぶ：
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {imageSuggestions.kigo_suggestions.map((k, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          onConfirmKigoFromPhoto(k, imageSuggestions.season);
+                          onStepChange(2);
+                        }}
+                        className="px-5 py-3 rounded-xl bg-amber-100 text-amber-800 text-xl font-semibold hover:bg-amber-200 border border-amber-200"
+                      >
+                        {k}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <div>
-                    <p className="text-5xl mb-2">📷</p>
-                    <p className="text-xl text-stone-800 mb-1">ここを押して写真を選ぶ</p>
-                    <p className="text-base text-stone-500">スマートフォンやカメラで撮った写真をお選びください。</p>
+                  <ul className="list-disc pl-6 space-y-1 text-lg text-stone-700 mt-4">
+                    {imageSuggestions.haiku_hints.map((h, idx) => (
+                      <li key={idx}>{h}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-8 pt-6 border-t border-stone-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onKigoDictOpenChange?.(true);
+                        setShowKigoDict(true);
+                      }}
+                      className="w-full py-3 rounded-xl border border-stone-300 text-stone-600 text-xl hover:bg-stone-50 hover:text-stone-800"
+                    >
+                      気に入った季語がない場合は 季語辞典から探す
+                    </button>
                   </div>
-                )}
-              </label>
-              <input
-                id="haiku-image-input"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    onResetImageSuggestions();
-                    onImageFileSelect(file);
-                  }
-                }}
-              />
-              {hintsBlock}
+                </>
+              )}
             </div>
 
             <button
               type="button"
-              disabled={!imageSuggestions || imageAnalyzing}
+              disabled={!kigo || imageAnalyzing}
               onClick={() => onStepChange(2)}
               className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -327,23 +420,38 @@ export default function SessionScreen({
   return (
     <div className="relative space-y-6">
       <div className="bg-white/80 backdrop-blur rounded-2xl p-8 shadow-lg border border-stone-200">
-        {/* ヘッダー */}
+        {/* ヘッダー：Step 1 ではお題を表示しない。Step 2 以降で kigo が決まっているときだけ表示 */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-base text-stone-600 mb-1">
               {role === 'host' ? '主' : '客'}：{userName}
             </p>
-            <p className="text-3xl font-bold text-stone-800 mb-1">{kigo}</p>
-            <p className="text-base text-stone-500">（{season}）</p>
+            {activeStep !== 1 && kigo && kigo.trim() ? (
+              <>
+                <p className="text-3xl font-bold text-stone-800 mb-1">{kigo}</p>
+                <p className="text-base text-stone-500">（{season}）</p>
+              </>
+            ) : (
+              <p className="text-xl text-stone-600">
+                {activeStep === 1
+                  ? role === 'guest'
+                    ? 'お題が決まるまでお待ちください'
+                    : 'お題を決めましょう'
+                  : 'お題が決まるまでお待ちください'}
+              </p>
+            )}
             <p className="mt-2 text-base text-stone-500">セッションID：{sessionId}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowKigoDict(true)}
-            className="text-base bg-green-100 text-green-800 px-4 py-2 rounded-full hover:bg-green-200"
-          >
-            📖 季語辞典
-          </button>
+          {activeStep !== 1 && kigo && (
+            <button
+              type="button"
+              onClick={() => setShowKigoDict(true)}
+              className="flex items-center gap-2 text-xl bg-green-100 text-green-800 px-5 py-3 rounded-xl hover:bg-green-200 font-semibold"
+            >
+              <span aria-hidden>📖</span>
+              <span>季語辞典</span>
+            </button>
+          )}
         </div>
 
         {/* ステップインジケータ */}
@@ -371,7 +479,18 @@ export default function SessionScreen({
       {showKigoDict && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40">
           <div className="max-w-2xl w-full">
-            <KigoDictScreen onClose={() => setShowKigoDict(false)} />
+            <KigoDictScreen
+              onClose={() => {
+                onKigoDictOpenChange?.(false);
+                setShowKigoDict(false);
+              }}
+              onSelectKigo={(kigoVal, seasonVal) => {
+                onKigoDictOpenChange?.(false);
+                onSelectKigoFromDict(kigoVal, seasonVal);
+                setShowKigoDict(false);
+                onStepChange(2);
+              }}
+            />
           </div>
         </div>
       )}

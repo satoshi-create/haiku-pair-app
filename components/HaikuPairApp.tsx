@@ -5,7 +5,6 @@ import {
   generateHaiga as generateHaigaAI,
   generateHaikuSuggestions,
 } from "@/lib/ai";
-import { pickRandomKigo } from "@/lib/kigo";
 import {
   loadHistory,
   loadSession,
@@ -51,6 +50,7 @@ export default function HaikuPairApp() {
   const [submitted, setSubmitted] = useState(false);
   const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
+  const [hostViewingKigoDict, setHostViewingKigoDict] = useState(false);
 
   // --- 句の履歴 ---
   const [haikuHistory, setHaikuHistory] = useState<HaikuHistoryEntry[]>([]);
@@ -149,6 +149,31 @@ export default function HaikuPairApp() {
       supabase.removeChannel(channel);
     };
   }, [dbSessionId, myParticipantId]);
+
+  // --- Realtime: sessions テーブル購読（ホストがお題を更新したらゲストに反映） ---
+  useEffect(() => {
+    if (!dbSessionId) return;
+    const channel = supabase
+      .channel(`sessions-${dbSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "sessions",
+          filter: `id=eq.${dbSessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as { kigo?: string; season?: string };
+          if (row.kigo != null) setKigo(row.kigo);
+          if (row.season != null) setSeason(row.season);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dbSessionId]);
 
   const saveToHistory = (
     haiku: string,
@@ -378,21 +403,47 @@ export default function HaikuPairApp() {
     }
   };
 
+  // --- お題の同期（ホストが季語を決定したときに呼ぶ） ---
+  const updateSessionKigo = async (kigoVal: string, seasonVal: string) => {
+    setKigo(kigoVal);
+    setSeason(seasonVal);
+    if (sessionData) {
+      const updated = { ...sessionData, kigo: kigoVal, season: seasonVal };
+      setSessionData(updated);
+      saveSession(sessionId, updated);
+    }
+    if (!dbSessionId) return;
+    try {
+      const { error } = await supabase
+        .from("sessions")
+        .update({ kigo: kigoVal, season: seasonVal })
+        .eq("id", dbSessionId);
+      if (error) console.error("[Supabase] sessions kigo update failed:", error.message);
+    } catch (e) {
+      console.error("[Supabase] updateSessionKigo:", e);
+    }
+  };
+
+  const handleKigoDictOpenChange = (open: boolean) => {
+    setHostViewingKigoDict(open);
+    // ゲストに「季語辞典を見ています」を伝えるには sessions に host_viewing_dict カラムを追加し、
+    // ここで Supabase を更新する必要があります。現状はローカル状態のみで、ゲストは常に「お題を探しています」と表示されます。
+  };
+
   // --- セッション操作 ---
   const createSession = async () => {
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const picked = pickRandomKigo();
 
     setSessionId(id);
-    setKigo(picked.kigo);
-    setSeason(picked.season);
+    setKigo("");
+    setSeason("");
     setRole("host");
     setMode("host");
 
     const data: SessionData = {
       id,
-      kigo: picked.kigo,
-      season: picked.season,
+      kigo: "",
+      season: "",
       host: userName,
       hostHaiku: "",
       guestHaiku: "",
@@ -407,8 +458,8 @@ export default function HaikuPairApp() {
         .from("sessions")
         .insert({
           code: id,
-          kigo: picked.kigo,
-          season: picked.season,
+          kigo: "",
+          season: "",
         })
         .select("id")
         .single();
@@ -517,6 +568,24 @@ export default function HaikuPairApp() {
           } else if (insertedParticipant) {
             setMyParticipantId(insertedParticipant.id);
           }
+          setSessionId(id);
+          setKigo(session.kigo ?? "");
+          setSeason(session.season ?? "");
+          setRole("guest");
+          setMode("session");
+          setActiveStep(1);
+          const guestSessionData: SessionData = {
+            id: session.code,
+            kigo: session.kigo ?? "",
+            season: session.season ?? "",
+            host: "",
+            hostHaiku: "",
+            guestHaiku: "",
+            created: (session as { created_at?: string }).created_at ?? new Date().toISOString(),
+          };
+          setSessionData(guestSessionData);
+          saveSession(id, guestSessionData);
+          return;
         }
       }
     } catch (e) {
@@ -676,6 +745,7 @@ export default function HaikuPairApp() {
     setMyParticipantId(null);
     setHasVoted(false);
     setActiveStep(1);
+    setHostViewingKigoDict(false);
   };
 
   // --- フェードインアニメーション ---
@@ -765,6 +835,10 @@ export default function HaikuPairApp() {
             imageSuggestions={imageSuggestions}
             onImageFileSelect={analyzeImageForHaiku}
             onResetImageSuggestions={() => setImageSuggestions(null)}
+            onConfirmKigoFromPhoto={updateSessionKigo}
+            onSelectKigoFromDict={updateSessionKigo}
+            hostViewingKigoDict={hostViewingKigoDict}
+            onKigoDictOpenChange={handleKigoDictOpenChange}
           />
         );
       case "gallery":
