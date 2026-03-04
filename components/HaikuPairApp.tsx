@@ -18,7 +18,7 @@ import type {
   ScreenMode,
   SessionData,
 } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import GalleryScreen from "@/components/screens/GalleryScreen";
 import HomeScreen from "@/components/screens/HomeScreen";
@@ -54,6 +54,8 @@ export default function HaikuPairApp() {
 
   // --- 句の履歴 ---
   const [haikuHistory, setHaikuHistory] = useState<HaikuHistoryEntry[]>([]);
+  /** 相手の句を履歴に保存したか（1回だけ保存） */
+  const partnerSavedToHistoryRef = useRef(false);
 
   useEffect(() => {
     setHaikuHistory(loadHistory());
@@ -164,9 +166,23 @@ export default function HaikuPairApp() {
           filter: `id=eq.${dbSessionId}`,
         },
         (payload) => {
-          const row = payload.new as { kigo?: string; season?: string };
+          const row = payload.new as {
+            kigo?: string;
+            season?: string;
+            shared_image?: string | null;
+            shared_hints?: string | null;
+          };
           if (row.kigo != null) setKigo(row.kigo);
           if (row.season != null) setSeason(row.season);
+          if (row.shared_image != null) setSharedImageDataUrl(row.shared_image || null);
+          if (row.shared_hints != null) {
+            try {
+              const parsed = JSON.parse(row.shared_hints) as ImageSuggestions;
+              setImageSuggestions(parsed);
+            } catch {
+              // ignore invalid JSON
+            }
+          }
         },
       )
       .subscribe();
@@ -189,12 +205,14 @@ export default function HaikuPairApp() {
       author,
       date: new Date().toISOString(),
     };
-    const updated = [newEntry, ...haikuHistory];
-    setHaikuHistory(updated);
-    saveHistory(updated);
+    setHaikuHistory((prev) => {
+      const updated = [newEntry, ...prev];
+      saveHistory(updated);
+      return updated;
+    });
   };
 
-  const deleteFromHistory = (id: number) => {
+  const deleteFromHistory = (id: number | string) => {
     const updated = haikuHistory.filter((item) => item.id !== id);
     setHaikuHistory(updated);
     saveHistory(updated);
@@ -279,14 +297,18 @@ export default function HaikuPairApp() {
     useState("");
   const [showHaigaModal, setShowHaigaModal] = useState(false);
   const [currentHaikuForHaiga, setCurrentHaikuForHaiga] = useState("");
+  const [currentKigoForHaiga, setCurrentKigoForHaiga] = useState("");
+  const [currentSeasonForHaiga, setCurrentSeasonForHaiga] = useState("");
 
-  const generateHaiga = async (haiku: string, kigoVal: string) => {
+  const generateHaiga = async (haikuVal: string, kigoVal: string, seasonOverride?: string) => {
     setIsGeneratingHaiga(true);
     setShowHaigaModal(true);
-    setCurrentHaikuForHaiga(haiku);
+    setCurrentHaikuForHaiga(haikuVal);
+    setCurrentKigoForHaiga(kigoVal);
+    setCurrentSeasonForHaiga(seasonOverride ?? season);
 
     try {
-      const description = await generateHaigaAI(haiku, kigoVal);
+      const description = await generateHaigaAI(haikuVal, kigoVal);
       setGeneratedHaigaDescription(description);
     } catch (error) {
       console.error("Haiga generation error:", error);
@@ -322,6 +344,8 @@ export default function HaikuPairApp() {
   const [imageAnalyzing, setImageAnalyzing] = useState(false);
   const [imageSuggestions, setImageSuggestions] =
     useState<ImageSuggestions | null>(null);
+  /** 共有用写真（data URL）。ホストは解析時にセット、ゲストは Realtime で受信 */
+  const [sharedImageDataUrl, setSharedImageDataUrl] = useState<string | null>(null);
 
   // 画像をキャンバスでリサイズして base64 に変換（大容量写真による4MBボディ制限超過を防ぐ）
   const resizeAndEncodeImage = (
@@ -357,6 +381,8 @@ export default function HaikuPairApp() {
 
     try {
       const { data, mediaType } = await resizeAndEncodeImage(imageFile);
+      const dataUrl = `data:${mediaType};base64,${data}`;
+      setSharedImageDataUrl(dataUrl);
       const parsed = await analyzeImage(data, mediaType);
       setImageSuggestions(parsed);
     } catch (error) {
@@ -407,16 +433,33 @@ export default function HaikuPairApp() {
   const updateSessionKigo = async (kigoVal: string, seasonVal: string) => {
     setKigo(kigoVal);
     setSeason(seasonVal);
+    const payload: Partial<SessionData> = {
+      kigo: kigoVal,
+      season: seasonVal,
+    };
     if (sessionData) {
-      const updated = { ...sessionData, kigo: kigoVal, season: seasonVal };
+      const updated = { ...sessionData, ...payload };
+      if (sharedImageDataUrl && imageSuggestions) {
+        updated.shared_image = sharedImageDataUrl;
+        updated.shared_hints = JSON.stringify(imageSuggestions);
+      }
       setSessionData(updated);
       saveSession(sessionId, updated);
     }
     if (!dbSessionId) return;
     try {
+      const dbPayload: Record<string, unknown> = {
+        kigo: kigoVal,
+        season: seasonVal,
+      };
+      if (sharedImageDataUrl && imageSuggestions) {
+        dbPayload.shared_image = sharedImageDataUrl;
+        dbPayload.shared_hints = JSON.stringify(imageSuggestions);
+        // ※ DB に shared_image / shared_hints カラムがない場合はマイグレーションが必要です
+      }
       const { error } = await supabase
         .from("sessions")
-        .update({ kigo: kigoVal, season: seasonVal })
+        .update(dbPayload)
         .eq("id", dbSessionId);
       if (error) console.error("[Supabase] sessions kigo update failed:", error.message);
     } catch (e) {
@@ -571,6 +614,15 @@ export default function HaikuPairApp() {
           setSessionId(id);
           setKigo(session.kigo ?? "");
           setSeason(session.season ?? "");
+          if (session.shared_image != null)
+            setSharedImageDataUrl(session.shared_image || null);
+          if (session.shared_hints != null) {
+            try {
+              setImageSuggestions(JSON.parse(session.shared_hints) as ImageSuggestions);
+            } catch {
+              // ignore
+            }
+          }
           setRole("guest");
           setMode("session");
           setActiveStep(1);
@@ -620,6 +672,9 @@ export default function HaikuPairApp() {
       saveSession(sessionId, updated);
       setSubmitted(true);
     }
+
+    // 提出と同時に履歴に保存（ギャラリーに表示）
+    saveToHistory(myHaiku.trim(), kigo, season, "私");
 
     // Supabase に保存（失敗してもUIは壊さない）
     try {
@@ -708,8 +763,13 @@ export default function HaikuPairApp() {
 
       // Supabase 成功 — localStorageフォールバック不要
       if (haiku) {
-        setPartnerHaiku(haiku.content);
+        const content = haiku.content ?? "";
+        setPartnerHaiku(content);
         setShowPartner(true);
+        if (content.trim() && !partnerSavedToHistoryRef.current) {
+          partnerSavedToHistoryRef.current = true;
+          saveToHistory(content.trim(), kigo, season, "相手");
+        }
       } else {
         alert("まだ提出されていません");
       }
@@ -724,6 +784,10 @@ export default function HaikuPairApp() {
       const partner = role === "host" ? data.guestHaiku : data.hostHaiku;
       setPartnerHaiku(partner);
       setShowPartner(true);
+      if (partner && partner.trim() && !partnerSavedToHistoryRef.current) {
+        partnerSavedToHistoryRef.current = true;
+        saveToHistory(partner.trim(), kigo, season, "相手");
+      }
     }
   };
 
@@ -746,6 +810,9 @@ export default function HaikuPairApp() {
     setHasVoted(false);
     setActiveStep(1);
     setHostViewingKigoDict(false);
+    setImageSuggestions(null);
+    setSharedImageDataUrl(null);
+    partnerSavedToHistoryRef.current = false;
   };
 
   // --- フェードインアニメーション ---
@@ -833,12 +900,18 @@ export default function HaikuPairApp() {
             // 写真解析（画面内で利用）
             imageAnalyzing={imageAnalyzing}
             imageSuggestions={imageSuggestions}
+            sharedImageDataUrl={sharedImageDataUrl}
             onImageFileSelect={analyzeImageForHaiku}
-            onResetImageSuggestions={() => setImageSuggestions(null)}
+            onResetImageSuggestions={() => {
+              setImageSuggestions(null);
+              setSharedImageDataUrl(null);
+            }}
             onConfirmKigoFromPhoto={updateSessionKigo}
             onSelectKigoFromDict={updateSessionKigo}
             hostViewingKigoDict={hostViewingKigoDict}
             onKigoDictOpenChange={handleKigoDictOpenChange}
+            hasAiSuggestions={aiSuggestions.length > 0}
+            aiSuggestions={aiSuggestions}
           />
         );
       case "gallery":
@@ -876,7 +949,12 @@ export default function HaikuPairApp() {
           isGenerating={isGeneratingHaiga}
           haiku={currentHaikuForHaiga}
           description={generatedHaigaDescription}
+          kigo={currentKigoForHaiga}
+          season={currentSeasonForHaiga}
+          author="私"
           onClose={() => setShowHaigaModal(false)}
+          onSaveToHistory={saveToHistory}
+          onOpenShareCard={openShareCard}
         />
 
         <ShareCardModal

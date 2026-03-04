@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import MoraCounter from '@/components/shared/MoraCounter';
 import KigoDictScreen from '@/components/screens/KigoDictScreen';
+import FamilyGallery from '@/components/FamilyGallery';
+
+/** ご家族の句（母_俳句.csv より）。Step 2 で背景のささやきとして表示 */
+const SAMPLE_FAMILY_HAIKU = '苗床に　朝の陽集め　露の網';
 
 interface SessionScreenProps {
   sessionId: string;
@@ -50,6 +54,11 @@ interface SessionScreenProps {
   onSelectKigoFromDict: (kigo: string, season: string) => void;
   hostViewingKigoDict?: boolean;
   onKigoDictOpenChange?: (open: boolean) => void;
+  hasAiSuggestions?: boolean;
+  /** 共有された写真（data URL）。参照パネルで表示 */
+  sharedImageDataUrl?: string | null;
+  /** Step 3 でAI相談した提案一覧。参考として画面上に残す */
+  aiSuggestions?: string[];
 }
 
 export default function SessionScreen({
@@ -91,14 +100,19 @@ export default function SessionScreen({
   onSelectKigoFromDict,
   hostViewingKigoDict = false,
   onKigoDictOpenChange,
+  hasAiSuggestions = false,
+  sharedImageDataUrl = null,
+  aiSuggestions = [],
 }: SessionScreenProps) {
   const [showKigoDict, setShowKigoDict] = useState(false);
+  const [showFamilyGallery, setShowFamilyGallery] = useState(false);
+  const [showEnlargedPhoto, setShowEnlargedPhoto] = useState(false);
 
   const stepLabel = (step: 1 | 2 | 3 | 4 | 5) => {
     if (step === 1 && role === 'guest') return 'ホストのお題を待つ';
     switch (step) {
       case 1:
-        return '写真を撮る';
+        return '写真からお題を決める';
       case 2:
         return '句を詠む';
       case 3:
@@ -111,39 +125,6 @@ export default function SessionScreen({
   };
 
   const renderStepContent = () => {
-    // 共通のヒントカード（Step1/2/3 で利用）
-    const hintsBlock = imageSuggestions && (
-      <div className="mb-6 bg-stone-50 border border-stone-200 rounded-xl p-5">
-        <p className="text-xl font-semibold text-stone-800 mb-2">作句のヒント</p>
-        <p className="text-base text-stone-700 mb-3">{imageSuggestions.scene_description}</p>
-        <div className="mb-3">
-          <p className="text-base font-semibold text-stone-700 mb-1">
-            提案された季語（{imageSuggestions.season}）：
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {imageSuggestions.kigo_suggestions.map((k, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-base"
-              >
-                {k}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-base font-semibold text-stone-700 mb-1">AIからの視点：</p>
-          <ul className="list-disc pl-6 space-y-1">
-            {imageSuggestions.haiku_hints.map((h, idx) => (
-              <li key={idx} className="text-base text-stone-700">
-                {h}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    );
-
     switch (activeStep) {
       case 1:
         if (role === 'guest') {
@@ -152,11 +133,8 @@ export default function SessionScreen({
               <div className="bg-white/80 rounded-2xl p-8 border border-stone-200">
                 {!kigo || !kigo.trim() ? (
                   <>
-                    <p className="text-2xl font-semibold text-stone-800 mb-3 text-center">
-                      お題が決まるまでお待ちください
-                    </p>
-                    <p className="text-xl text-stone-600 text-center mb-2">ホストがお題を探しています…</p>
-                    <p className="text-lg text-stone-500 text-center">しばらくお待ちください。</p>
+                    <p className="text-2xl font-semibold text-stone-800 mb-2 text-center">ホストがお題を探しています…</p>
+                    <p className="text-xl text-stone-600 text-center">しばらくお待ちください。</p>
                   </>
                 ) : (
                   <>
@@ -279,18 +257,19 @@ export default function SessionScreen({
               onClick={() => onStepChange(2)}
               className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              句を詠むへ進む
+              句を詠む
             </button>
           </div>
         );
 
       case 2:
         return (
-          <div className="space-y-6">
-            {hintsBlock}
-
-            <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
-              <p className="text-xl text-stone-700 mb-3">あなたの句</p>
+          <div className="space-y-4">
+            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
+              <p className="text-lg text-stone-800 font-semibold mb-2">あなたの句</p>
+              <p className="text-sm text-stone-400 mb-2" aria-hidden>
+                （ご家族の句より：{SAMPLE_FAMILY_HAIKU.replace(/　/g, ' ')}）
+              </p>
               <textarea
                 value={myHaiku}
                 onChange={(e) => {
@@ -298,10 +277,10 @@ export default function SessionScreen({
                   onSetSubmitted(false);
                 }}
                 placeholder={'思いついた言葉から、気楽に書きはじめてみましょう。'}
-                className="w-full p-4 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[120px] text-xl text-stone-800"
+                className="w-full p-4 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-xl text-stone-900 placeholder:text-stone-500"
               />
               {myHaiku && (
-                <div className="mt-4">
+                <div className="mt-3">
                   <MoraCounter text={myHaiku} />
                 </div>
               )}
@@ -311,7 +290,7 @@ export default function SessionScreen({
               type="button"
               disabled={!myHaiku.trim()}
               onClick={() => onStepChange(3)}
-              className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               AIに相談する前へ
             </button>
@@ -320,33 +299,54 @@ export default function SessionScreen({
 
       case 3:
         return (
-          <div className="space-y-6">
-            <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
-              <p className="text-xl font-semibold text-stone-800 mb-3">今の句を、もう一息よくしましょう。</p>
-              <p className="text-base text-stone-700 mb-4">
-                言い換えの案や、ことばの並べ方をAIに一度たずねてみることができます。
+          <div className="space-y-4">
+            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
+              <p className="text-lg font-semibold text-stone-800 mb-2">今の句を、もう一息よくしましょう。</p>
+              <p className="text-base text-stone-700 mb-3">
+                言い換えの案や、ことばの並べ方をAIにたずねてみることができます。
               </p>
 
-              <div className="mb-4 bg-stone-50 border border-stone-200 rounded-xl p-4">
-                <p className="text-base text-stone-600 mb-2">いまの句</p>
-                <p className="text-xl text-stone-800 whitespace-pre-wrap">{myHaiku || 'まだ句が書かれていません。'}</p>
+              <div className="mb-3">
+                <p className="text-base text-stone-700 mb-1">いまの句（編集できます）</p>
+                <textarea
+                  value={myHaiku}
+                  onChange={(e) => {
+                    onMyHaikuChange(e.target.value);
+                    onSetSubmitted(false);
+                  }}
+                  placeholder="句を入力してください"
+                  className="w-full p-4 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[80px] text-xl text-stone-900 placeholder:text-stone-500"
+                />
               </div>
+
+              {hasAiSuggestions && aiSuggestions.length > 0 && (
+                <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <p className="text-sm font-semibold text-stone-800 mb-1">AIからの提案（参考）</p>
+                  <ul className="space-y-1">
+                    {aiSuggestions.map((s, idx) => (
+                      <li key={idx} className="text-base text-stone-700 pl-3 border-l-2 border-amber-300">
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <button
                 type="button"
                 disabled={!myHaiku.trim()}
                 onClick={() => onGenerateAISuggestions(myHaiku, kigo)}
-                className="w-full bg-amber-600 text-white text-2xl py-4 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-amber-600 text-white text-xl py-3 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                AIに相談する
+                {hasAiSuggestions ? '別の提案をみる' : 'AIに相談する'}
               </button>
 
               <button
                 type="button"
                 onClick={() => onStepChange(4)}
-                className="mt-4 w-full text-base text-stone-600 hover:text-stone-800"
+                className="mt-3 w-full text-lg text-stone-600 hover:text-stone-800 py-2.5"
               >
-                AIは使わず、そのまま進む
+                {hasAiSuggestions ? 'このヒントをもとに直す' : '今の提案を参考にして次へ進む'}
               </button>
             </div>
           </div>
@@ -354,11 +354,11 @@ export default function SessionScreen({
 
       case 4:
         return (
-          <div className="space-y-6">
-            <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
-              <p className="text-xl text-stone-700 mb-3">この句でよろしければ、みんなに送信します。</p>
-              <div className="bg-stone-50 rounded-xl p-6 border border-stone-200">
-                <p className="text-2xl text-stone-800 leading-relaxed whitespace-pre-wrap">
+          <div className="space-y-4">
+            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
+              <p className="text-lg text-stone-700 mb-2">この句でよろしければ、みんなに送信します。</p>
+              <div className="bg-stone-50 rounded-xl p-4 border border-stone-200">
+                <p className="text-xl text-stone-800 leading-relaxed whitespace-pre-wrap">
                   {myHaiku || 'まだ句が書かれていません。'}
                 </p>
               </div>
@@ -371,7 +371,7 @@ export default function SessionScreen({
                 onSubmitHaiku();
                 onStepChange(5);
               }}
-              className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               この句をみんなに送る
             </button>
@@ -397,6 +397,16 @@ export default function SessionScreen({
               </div>
             </div>
 
+            {myHaiku.trim() && (
+              <button
+                type="button"
+                onClick={() => onGenerateHaiga(myHaiku, kigo)}
+                className="w-full bg-amber-500 text-white text-2xl py-4 rounded-2xl hover:bg-amber-600 font-semibold"
+              >
+                🎨 この句で俳画（絵）を作る
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onCheckPartner}
@@ -420,8 +430,8 @@ export default function SessionScreen({
   return (
     <div className="relative space-y-6">
       <div className="bg-white/80 backdrop-blur rounded-2xl p-8 shadow-lg border border-stone-200">
-        {/* ヘッダー：Step 1 ではお題を表示しない。Step 2 以降で kigo が決まっているときだけ表示 */}
-        <div className="flex items-start justify-between mb-6">
+        {/* ヘッダー：お題 と 季語辞典 */}
+        <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-base text-stone-600 mb-1">
               {role === 'host' ? '主' : '客'}：{userName}
@@ -431,28 +441,65 @@ export default function SessionScreen({
                 <p className="text-3xl font-bold text-stone-800 mb-1">{kigo}</p>
                 <p className="text-base text-stone-500">（{season}）</p>
               </>
-            ) : (
-              <p className="text-xl text-stone-600">
-                {activeStep === 1
-                  ? role === 'guest'
-                    ? 'お題が決まるまでお待ちください'
-                    : 'お題を決めましょう'
-                  : 'お題が決まるまでお待ちください'}
-              </p>
-            )}
+            ) : activeStep !== 1 ? (
+              <p className="text-xl text-stone-600">お題が決まるまでお待ちください</p>
+            ) : null}
             <p className="mt-2 text-base text-stone-500">セッションID：{sessionId}</p>
           </div>
           {activeStep !== 1 && kigo && (
-            <button
-              type="button"
-              onClick={() => setShowKigoDict(true)}
-              className="flex items-center gap-2 text-xl bg-green-100 text-green-800 px-5 py-3 rounded-xl hover:bg-green-200 font-semibold"
-            >
-              <span aria-hidden>📖</span>
-              <span>季語辞典</span>
-            </button>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowFamilyGallery(true)}
+                className="flex items-center gap-2 text-xl bg-amber-50 text-amber-900 border border-amber-200 px-5 py-3 rounded-xl hover:bg-amber-100 font-semibold"
+              >
+                <span aria-hidden>📒</span>
+                <span>家族の句</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowKigoDict(true)}
+                className="flex items-center gap-2 text-xl bg-green-100 text-green-800 px-5 py-3 rounded-xl hover:bg-green-200 font-semibold"
+              >
+                <span aria-hidden>📖</span>
+                <span>季語辞典</span>
+              </button>
+            </div>
           )}
         </div>
+
+        {/* 共有バナー（Step 2,3,4 かつ 写真 or ヒントあり） */}
+        {(activeStep === 2 || activeStep === 3 || activeStep === 4) &&
+          (sharedImageDataUrl || imageSuggestions) && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => setShowEnlargedPhoto(true)}
+                className="w-full flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/90 p-2.5 text-left hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                aria-label="散歩の写真とヒントを拡大表示"
+              >
+                {sharedImageDataUrl && (
+                  <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-stone-200 bg-stone-100">
+                    <img
+                      src={sharedImageDataUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-stone-800 mb-0.5">
+                    📸 散歩の写真を見る（タップで拡大）
+                  </p>
+                  {imageSuggestions && (
+                    <p className="text-sm text-stone-700 line-clamp-2 leading-snug">
+                      {imageSuggestions.scene_description}
+                    </p>
+                  )}
+                </div>
+              </button>
+            </div>
+          )}
 
         {/* ステップインジケータ */}
         <div className="mb-6">
@@ -475,10 +522,71 @@ export default function SessionScreen({
         {renderStepContent()}
       </div>
 
+      {/* 拡大表示モーダル：写真＋ヒント全文 */}
+      {showEnlargedPhoto && (sharedImageDataUrl || imageSuggestions) && (
+        <div
+          className="fixed inset-0 bg-black/70 flex flex-col items-center justify-center p-4 z-40"
+          onClick={() => setShowEnlargedPhoto(false)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Escape' && setShowEnlargedPhoto(false)}
+          aria-label="閉じる"
+        >
+          <div
+            className="max-w-lg w-full max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-stone-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {sharedImageDataUrl && (
+              <div className="p-3 border-b border-stone-200">
+                <img
+                  src={sharedImageDataUrl}
+                  alt="お題の写真"
+                  className="w-full max-h-[50vh] object-contain rounded-lg"
+                />
+              </div>
+            )}
+            {imageSuggestions && (
+              <div className="p-4 text-stone-800">
+                <p className="text-lg font-semibold mb-2">作句のヒント</p>
+                <p className="text-base text-stone-700 mb-3">{imageSuggestions.scene_description}</p>
+                {imageSuggestions.haiku_hints.length > 0 && (
+                  <>
+                    <p className="text-sm font-semibold text-stone-700 mb-1">AIからの視点</p>
+                    <ul className="list-disc pl-5 space-y-1 text-base text-stone-700">
+                      {imageSuggestions.haiku_hints.map((h, idx) => (
+                        <li key={idx}>{h}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="p-4 pt-0">
+              <button
+                type="button"
+                onClick={() => setShowEnlargedPhoto(false)}
+                className="w-full py-4 text-xl font-bold text-stone-800 bg-stone-200 hover:bg-stone-300 rounded-xl transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 季語辞典オーバーレイ */}
       {showKigoDict && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40">
-          <div className="max-w-2xl w-full">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+          onClick={() => {
+            onKigoDictOpenChange?.(false);
+            setShowKigoDict(false);
+          }}
+        >
+          <div
+            className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             <KigoDictScreen
               onClose={() => {
                 onKigoDictOpenChange?.(false);
@@ -491,6 +599,21 @@ export default function SessionScreen({
                 onStepChange(2);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* 家族の句ギャラリーオーバーレイ */}
+      {showFamilyGallery && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+          onClick={() => setShowFamilyGallery(false)}
+        >
+          <div
+            className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FamilyGallery onClose={() => setShowFamilyGallery(false)} />
           </div>
         </div>
       )}

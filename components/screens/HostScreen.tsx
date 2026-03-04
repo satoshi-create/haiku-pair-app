@@ -44,12 +44,7 @@ export default function HostScreen({
           <div className="text-center">
             <p className="text-xl text-stone-600 mb-4">お相手に以下のIDを伝えてください</p>
             <div className="bg-stone-100 p-6 rounded-lg mb-6">
-              <div className="text-4xl font-bold text-stone-800 tracking-wider mb-6">{sessionId}</div>
-              <p className="text-xl text-stone-700 leading-relaxed">
-                座の準備が整いました。
-                <br />
-                次に、散歩の写真から今日のお題を見つけましょう。
-              </p>
+              <div className="text-4xl font-bold text-stone-800 tracking-wider">{sessionId}</div>
             </div>
           </div>
 

@@ -25,6 +25,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* テキスト入力の視認性（シニアフレンドリー） */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+textarea {
+  color: #1c1917; /* stone-900 */
+}
+input::placeholder,
+textarea::placeholder {
+  color: #78716c; /* stone-500 */
+}
+
 /* Haiku app animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

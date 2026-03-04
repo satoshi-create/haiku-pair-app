@@ -11,9 +11,19 @@ export default function KigoDictScreen({ onClose, onSelectKigo }: KigoDictScreen
   const [kigoSearchQuery, setKigoSearchQuery] = useState('');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-h-[90vh] overflow-y-auto">
       <div className="bg-white/80 backdrop-blur rounded-lg p-8 shadow-lg border border-stone-200">
-        <h2 className="text-2xl font-bold text-stone-800 mb-6 text-center">📖 季語辞典</h2>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-stone-800">📖 季語辞典</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 w-12 h-12 flex items-center justify-center rounded-full text-stone-500 hover:bg-stone-200 hover:text-stone-700 text-2xl transition-colors"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
 
         <input
           type="text"
@@ -105,8 +115,9 @@ export default function KigoDictScreen({ onClose, onSelectKigo }: KigoDictScreen
 
         <div className="mt-6 pt-4 border-t border-stone-200">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full text-xl text-stone-600 hover:text-stone-800 py-3"
+            className="w-full text-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 py-4 rounded-xl font-semibold transition-colors"
           >
             閉じる
           </button>
