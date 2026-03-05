@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import MoraCounter from '@/components/shared/MoraCounter';
-import KigoDictScreen from '@/components/screens/KigoDictScreen';
 import FamilyGallery from '@/components/FamilyGallery';
+import KigoDictScreen from '@/components/screens/KigoDictScreen';
+import MoraCounter from '@/components/shared/MoraCounter';
+import { useState } from 'react';
 
 /** ご家族の句（母_俳句.csv より）。Step 2 で背景のささやきとして表示 */
 const SAMPLE_FAMILY_HAIKU = '苗床に　朝の陽集め　露の網';

@@ -1,22 +1,22 @@
 "use client";
 
 import {
-  analyzeImage,
-  generateHaiga as generateHaigaAI,
-  generateHaikuSuggestions,
+    analyzeImage,
+    generateHaiga as generateHaigaAI,
+    generateHaikuSuggestions,
 } from "@/lib/ai";
 import {
-  loadHistory,
-  loadSession,
-  saveHistory,
-  saveSession,
+    loadHistory,
+    loadSession,
+    saveHistory,
+    saveSession,
 } from "@/lib/storage";
 import { supabase } from "@/lib/supabase/client";
 import type {
-  HaikuHistoryEntry,
-  ImageSuggestions,
-  ScreenMode,
-  SessionData,
+    HaikuHistoryEntry,
+    ImageSuggestions,
+    ScreenMode,
+    SessionData,
 } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 

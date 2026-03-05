@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { HaikuHistoryEntry } from "@/lib/types";
 import {
-  fetchHaikuHistory,
-  getSeasonBgClass,
+    fetchHaikuHistory,
+    getSeasonBgClass,
 } from "@/lib/haikuHistoryApi";
+import type { HaikuHistoryEntry } from "@/lib/types";
+import { useEffect, useState } from "react";
 
 interface GalleryScreenProps {
   history: HaikuHistoryEntry[];
