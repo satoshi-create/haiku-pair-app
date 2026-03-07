@@ -6,12 +6,17 @@ import {
     generateHaikuSuggestions,
 } from "@/lib/ai";
 import {
+    ensureMyUserUuid,
+    getDisplayName,
+    getMyUserUuid,
     loadHistory,
     loadSession,
     saveHistory,
     saveSession,
+    setDisplayName,
 } from "@/lib/storage";
 import { supabase } from "@/lib/supabase/client";
+import { uploadHaikuImage } from "@/lib/supabase/storage";
 import type {
     HaikuHistoryEntry,
     ImageSuggestions,
@@ -31,6 +36,44 @@ import HaigaModal from "@/components/modals/HaigaModal";
 import ShareCardModal from "@/components/modals/ShareCardModal";
 
 export default function HaikuPairApp() {
+  // --- ユーザーID読み込み（アプリ起動時に確実にセット） ---
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userIdLoading, setUserIdLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      const uuid = ensureMyUserUuid();
+      console.log("[Debug] App startup - my_user_uuid:", uuid);
+      if (!uuid) {
+        setUserIdLoading(false);
+        return;
+      }
+      setUserId(uuid);
+
+      // profiles テーブルに存在保証（Upsert）。完了してからローディング解除
+      const displayName = getDisplayName() ?? "";
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .upsert(
+            { id: uuid, display_name: displayName },
+            { onConflict: "id" },
+          );
+        if (error) {
+          console.warn("[profiles] upsert failed:", error.message);
+        }
+      } catch (e) {
+        console.warn("[profiles] upsert error:", e);
+      }
+      if (!cancelled) setUserIdLoading(false);
+    };
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // --- 画面モード ---
   const [mode, setMode] = useState<ScreenMode>("home");
 
@@ -40,7 +83,11 @@ export default function HaikuPairApp() {
   // --- セッション状態 ---
   const [sessionId, setSessionId] = useState("");
   const [role, setRole] = useState("");
-  const [userName, setUserName] = useState("");
+  const [userName, setUserNameState] = useState("");
+  const setUserName = (name: string) => {
+    setUserNameState(name);
+    setDisplayName(name);
+  };
   const [kigo, setKigo] = useState("");
   const [season, setSeason] = useState("");
   const [myHaiku, setMyHaiku] = useState("");
@@ -48,6 +95,7 @@ export default function HaikuPairApp() {
   const [showPartner, setShowPartner] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmittingHaiku, setIsSubmittingHaiku] = useState(false);
   const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [hostViewingKigoDict, setHostViewingKigoDict] = useState(false);
@@ -59,6 +107,11 @@ export default function HaikuPairApp() {
 
   useEffect(() => {
     setHaikuHistory(loadHistory());
+  }, []);
+
+  useEffect(() => {
+    const stored = getDisplayName();
+    if (stored) setUserNameState(stored);
   }, []);
 
   // --- Realtime: 相手の俳句を自動受信 ---
@@ -517,12 +570,14 @@ export default function HaikuPairApp() {
 
       setDbSessionId(createdSession.id);
 
-      // client_key の生成・取得
+      // client_key の生成・取得（user_id と別物。座席管理用）
       const clientKey =
         localStorage.getItem("client_key") ?? crypto.randomUUID();
       localStorage.setItem("client_key", clientKey);
 
-      // participants に host を insert
+      // participants に host を insert。user_id は常に localStorage から取得
+      const hostUserId = getMyUserUuid() ?? ensureMyUserUuid();
+      console.log("[Debug] participants insert 直前 (host) - my_user_uuid:", hostUserId);
       const { data: createdParticipant, error: participantError } =
         await supabase
           .from("participants")
@@ -531,6 +586,7 @@ export default function HaikuPairApp() {
             name: userName,
             role: "host",
             client_key: clientKey,
+            ...(hostUserId && { user_id: hostUserId }),
           })
           .select("id")
           .single();
@@ -549,7 +605,18 @@ export default function HaikuPairApp() {
   };
 
   const joinSession = async (id: string) => {
+    // user_id は常に localStorage から取得
+    const freshUserId = getMyUserUuid() ?? ensureMyUserUuid();
+    console.log("[Debug] joinSession - my_user_uuid:", freshUserId);
+
     try {
+      if (freshUserId) setUserId(freshUserId);
+      if (!freshUserId) {
+        console.error("[joinSession] user_id を取得できませんでした");
+        alert("ユーザー情報の読み込みに失敗しました。ページを再読み込みしてください。");
+        return;
+      }
+
       const { data: session, error: sessionError } = await supabase
         .from("sessions")
         .select("*")
@@ -586,10 +653,12 @@ export default function HaikuPairApp() {
         } else {
           setDbSessionId(session.id);
 
-          // guest を insert
+          // guest を insert。user_id は常に localStorage から取得
           const clientKey =
             localStorage.getItem("client_key") ?? crypto.randomUUID();
           localStorage.setItem("client_key", clientKey);
+          const participantUserId = getMyUserUuid() ?? ensureMyUserUuid();
+          console.log("[Debug] participants insert 直前 (guest) - my_user_uuid:", participantUserId);
 
           const { data: insertedParticipant, error: participantError } =
             await supabase
@@ -599,6 +668,7 @@ export default function HaikuPairApp() {
                 name: userName,
                 role: "guest",
                 client_key: clientKey,
+                ...(participantUserId && { user_id: participantUserId }),
               })
               .select("id")
               .single();
@@ -662,6 +732,15 @@ export default function HaikuPairApp() {
   const submitHaiku = async () => {
     if (!myHaiku.trim()) return;
 
+    // user_id は常に localStorage から取得
+    const currentUserId = getMyUserUuid() ?? ensureMyUserUuid();
+    console.log("[Debug] submitHaiku - my_user_uuid:", currentUserId);
+
+    if (!currentUserId) {
+      alert("ユーザー情報の再読み込みが必要です。ページを再読み込みしてください。");
+      return;
+    }
+
     // 既存のlocalStorageロジック（UIは先に更新）
     if (sessionData) {
       const updated = {
@@ -677,6 +756,7 @@ export default function HaikuPairApp() {
     saveToHistory(myHaiku.trim(), kigo, season, "私");
 
     // Supabase に保存（失敗してもUIは壊さない）
+    setIsSubmittingHaiku(true);
     try {
       const { data: session, error: sessionError } = await supabase
         .from("sessions")
@@ -707,13 +787,50 @@ export default function HaikuPairApp() {
         return;
       }
 
+      // 送信直前に localStorage から user_id を再取得（ステートに依存しない）
+      const userIdForInsert = getMyUserUuid() ?? ensureMyUserUuid();
+      if (!userIdForInsert) {
+        alert("ユーザー情報の再読み込みが必要です。ページを再読み込みしてください。");
+        return;
+      }
+
+      // image_url: 共有写真。Data URL の場合は Storage にアップロードして公開URLを取得
+      const rawImageUrl =
+        sharedImageDataUrl ?? (session as { shared_image?: string | null }).shared_image ?? null;
+
+      let imageUrlForInsert: string | null = null;
+      if (rawImageUrl) {
+        console.log("A: Before upload:", rawImageUrl.substring(0, 20));
+        if (rawImageUrl.startsWith("data:")) {
+          const uploadResult = await uploadHaikuImage(rawImageUrl, userIdForInsert);
+          console.log("B: After upload result:", uploadResult);
+          if (!uploadResult) {
+            alert("画像の保存に失敗しました。もう一度お試しください。");
+            return;
+          }
+          if (!uploadResult.startsWith("https://")) {
+            console.error("[submitHaiku] upload returned non-https URL:", uploadResult);
+            alert("画像の保存に失敗しました。");
+            return;
+          }
+          imageUrlForInsert = uploadResult;
+        } else if (rawImageUrl.startsWith("https://")) {
+          imageUrlForInsert = rawImageUrl;
+        }
+      }
+
+      const haikuPayload = {
+        session_id: session.id,
+        participant_id: participant.id,
+        user_id: userIdForInsert,
+        content: myHaiku,
+        submitted_at: new Date().toISOString(),
+        ...(imageUrlForInsert && { image_url: imageUrlForInsert }),
+      };
+      console.log("C: DB Payload:", haikuPayload);
+
       const { error: upsertError } = await supabase.from("haikus").upsert(
-        {
-          session_id: session.id,
-          participant_id: participant.id,
-          content: myHaiku,
-          submitted_at: new Date().toISOString(),
-        },
+        haikuPayload,
         { onConflict: "session_id,participant_id" },
       );
 
@@ -722,6 +839,8 @@ export default function HaikuPairApp() {
       }
     } catch (e) {
       console.error("[Supabase] unexpected error in submitHaiku:", e);
+    } finally {
+      setIsSubmittingHaiku(false);
     }
   };
 
@@ -912,6 +1031,8 @@ export default function HaikuPairApp() {
             onKigoDictOpenChange={handleKigoDictOpenChange}
             hasAiSuggestions={aiSuggestions.length > 0}
             aiSuggestions={aiSuggestions}
+            userId={userId}
+            isSubmittingHaiku={isSubmittingHaiku}
           />
         );
       case "gallery":
@@ -926,6 +1047,17 @@ export default function HaikuPairApp() {
         );
     }
   };
+
+  // ユーザーID読み込み中はローディング表示。未確定のままセッション画面へ進まない。
+  if (userIdLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-stone-100 to-amber-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-2xl text-stone-600 animate-pulse">読み込み中…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-100 to-amber-50 flex items-center justify-center p-4">

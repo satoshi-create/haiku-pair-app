@@ -59,6 +59,10 @@ interface SessionScreenProps {
   sharedImageDataUrl?: string | null;
   /** Step 3 でAI相談した提案一覧。参考として画面上に残す */
   aiSuggestions?: string[];
+  /** 確定済みユーザーID。未確定時は投稿ボタンを無効化 */
+  userId?: string | null;
+  /** 俳句投稿中（画像アップロード・DB保存）。保存中...を表示 */
+  isSubmittingHaiku?: boolean;
 }
 
 export default function SessionScreen({
@@ -103,6 +107,8 @@ export default function SessionScreen({
   hasAiSuggestions = false,
   sharedImageDataUrl = null,
   aiSuggestions = [],
+  userId = null,
+  isSubmittingHaiku = false,
 }: SessionScreenProps) {
   const [showKigoDict, setShowKigoDict] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
@@ -366,14 +372,14 @@ export default function SessionScreen({
 
             <button
               type="button"
-              disabled={!myHaiku.trim()}
+              disabled={!myHaiku.trim() || !userId || isSubmittingHaiku}
               onClick={() => {
                 onSubmitHaiku();
                 onStepChange(5);
               }}
               className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              この句をみんなに送る
+              {isSubmittingHaiku ? "保存中..." : "この句をみんなに送る"}
             </button>
           </div>
         );

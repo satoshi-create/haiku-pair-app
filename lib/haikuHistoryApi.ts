@@ -9,6 +9,7 @@ type DbHaiku = {
   submitted_at: string;
   sessions: { kigo: string; season: string } | null;
   participants: { name: string } | null;
+  profiles: { display_name: string | null } | null;
 };
 
 /** 季節に応じたプレースホルダー背景色クラス */
@@ -58,7 +59,8 @@ export async function fetchHaikuHistory(clientKey: string): Promise<HaikuHistory
       .select(`
         id, content, image_url, tags, submitted_at,
         sessions(kigo, season),
-        participants(name)
+        participants(name),
+        profiles(display_name)
       `)
       .in("participant_id", ids)
       .order("submitted_at", { ascending: false });
@@ -68,16 +70,21 @@ export async function fetchHaikuHistory(clientKey: string): Promise<HaikuHistory
       return [];
     }
 
-    return ((data ?? []) as unknown as DbHaiku[]).map((row) => ({
-      id: row.id,
-      haiku: row.content ?? "",
-      kigo: row.sessions?.kigo ?? "—",
-      season: row.sessions?.season ?? "—",
-      author: row.participants?.name ?? "私",
-      date: row.submitted_at ?? new Date().toISOString(),
-      image_url: row.image_url ?? null,
-      tags: normalizeTags(row.tags),
-    }));
+    return ((data ?? []) as unknown as DbHaiku[]).map((row) => {
+      const displayName = row.profiles?.display_name?.trim();
+      const participantName = row.participants?.name?.trim();
+      const author = displayName || participantName || "私";
+      return {
+        id: row.id,
+        haiku: row.content ?? "",
+        kigo: row.sessions?.kigo ?? "—",
+        season: row.sessions?.season ?? "—",
+        author,
+        date: row.submitted_at ?? new Date().toISOString(),
+        image_url: row.image_url ?? null,
+        tags: normalizeTags(row.tags),
+      };
+    });
   } catch (e) {
     console.error("[fetchHaikuHistory]", e);
     return [];
