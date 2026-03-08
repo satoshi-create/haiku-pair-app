@@ -63,6 +63,12 @@ interface SessionScreenProps {
   userId?: string | null;
   /** 俳句投稿中（画像アップロード・DB保存）。保存中...を表示 */
   isSubmittingHaiku?: boolean;
+  /** 連投防止クールダウン中 */
+  isCoolingDown?: boolean;
+  /** クールダウン残り秒数（次の投稿まであと◯秒） */
+  coolDownSecondsRemaining?: number;
+  /** AI相談の残り回数（0で制限到達） */
+  aiSuggestionRemaining?: number;
 }
 
 export default function SessionScreen({
@@ -109,6 +115,9 @@ export default function SessionScreen({
   aiSuggestions = [],
   userId = null,
   isSubmittingHaiku = false,
+  isCoolingDown = false,
+  coolDownSecondsRemaining = 0,
+  aiSuggestionRemaining,
 }: SessionScreenProps) {
   const [showKigoDict, setShowKigoDict] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
@@ -338,14 +347,21 @@ export default function SessionScreen({
                 </div>
               )}
 
-              <button
-                type="button"
-                disabled={!myHaiku.trim()}
-                onClick={() => onGenerateAISuggestions(myHaiku, kigo)}
-                className="w-full bg-amber-600 text-white text-xl py-3 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {hasAiSuggestions ? '別の提案をみる' : 'AIに相談する'}
-              </button>
+              <div className="space-y-2">
+                {typeof aiSuggestionRemaining === 'number' && (
+                  <p className="text-sm text-stone-600">
+                    残り相談回数：{aiSuggestionRemaining}回
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={!myHaiku.trim() || (typeof aiSuggestionRemaining === 'number' && aiSuggestionRemaining <= 0)}
+                  onClick={() => onGenerateAISuggestions(myHaiku, kigo)}
+                  className="w-full bg-amber-600 text-white text-xl py-3 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {hasAiSuggestions ? '別の提案をみる' : 'AIに相談する'}
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -372,14 +388,20 @@ export default function SessionScreen({
 
             <button
               type="button"
-              disabled={!myHaiku.trim() || !userId || isSubmittingHaiku}
+              disabled={!myHaiku.trim() || !userId || isSubmittingHaiku || isCoolingDown}
               onClick={() => {
                 onSubmitHaiku();
                 onStepChange(5);
               }}
               className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmittingHaiku ? "保存中..." : "この句をみんなに送る"}
+              {isSubmittingHaiku
+                ? "保存中..."
+                : isCoolingDown
+                  ? coolDownSecondsRemaining > 0
+                    ? `次の投稿まであと${coolDownSecondsRemaining}秒`
+                    : "少し待ってね..."
+                  : "この句をみんなに送る"}
             </button>
           </div>
         );

@@ -127,3 +127,26 @@ export function setDisplayName(name: string): void {
     console.log("Failed to save user_display_name");
   }
 }
+
+// --- 俳句投稿レートリミット（Cool-down） ---
+const LAST_HAIKU_SUBMIT_KEY = "last_haiku_submit_timestamp";
+export const HAIKU_COOLDOWN_SECONDS = 30;
+
+export function getLastHaikuSubmitTimestamp(): number | null {
+  if (!isBrowser) return null;
+  try {
+    const v = localStorage.getItem(LAST_HAIKU_SUBMIT_KEY);
+    return v ? parseInt(v, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setLastHaikuSubmitTimestamp(timestamp: number): void {
+  if (!isBrowser) return;
+  try {
+    localStorage.setItem(LAST_HAIKU_SUBMIT_KEY, String(timestamp));
+  } catch {
+    console.log("Failed to save last_haiku_submit_timestamp");
+  }
+}

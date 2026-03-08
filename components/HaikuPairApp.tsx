@@ -8,13 +8,21 @@ import {
 import {
     ensureMyUserUuid,
     getDisplayName,
+    getLastHaikuSubmitTimestamp,
     getMyUserUuid,
+    HAIKU_COOLDOWN_SECONDS,
     loadHistory,
     loadSession,
     saveHistory,
     saveSession,
     setDisplayName,
+    setLastHaikuSubmitTimestamp,
 } from "@/lib/storage";
+import {
+    checkAiRateLimit,
+    getAiRequestRemaining,
+    logAiRequest,
+} from "@/lib/supabase/aiRateLimit";
 import { supabase } from "@/lib/supabase/client";
 import { uploadHaikuImage } from "@/lib/supabase/storage";
 import type {
@@ -96,6 +104,8 @@ export default function HaikuPairApp() {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmittingHaiku, setIsSubmittingHaiku] = useState(false);
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+  const [coolDownSecondsRemaining, setCoolDownSecondsRemaining] = useState(0);
   const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [hostViewingKigoDict, setHostViewingKigoDict] = useState(false);
@@ -113,6 +123,32 @@ export default function HaikuPairApp() {
     const stored = getDisplayName();
     if (stored) setUserNameState(stored);
   }, []);
+
+  // --- 俳句投稿クールダウン（localStorage から復元） ---
+  useEffect(() => {
+    const last = getLastHaikuSubmitTimestamp();
+    if (!last) return;
+    const elapsed = (Date.now() - last) / 1000;
+    if (elapsed < HAIKU_COOLDOWN_SECONDS) {
+      setIsCoolingDown(true);
+      setCoolDownSecondsRemaining(Math.ceil(HAIKU_COOLDOWN_SECONDS - elapsed));
+    }
+  }, []);
+
+  // --- クールダウンカウントダウン ---
+  useEffect(() => {
+    if (!isCoolingDown || coolDownSecondsRemaining <= 0) return;
+    const timer = setInterval(() => {
+      setCoolDownSecondsRemaining((s) => {
+        if (s <= 1) {
+          setIsCoolingDown(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isCoolingDown, coolDownSecondsRemaining]);
 
   // --- Realtime: 相手の俳句を自動受信 ---
   // useEffect(() => {
@@ -460,9 +496,35 @@ export default function HaikuPairApp() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
   const [userIdea, setUserIdea] = useState("");
+  const [aiSuggestionRemaining, setAiSuggestionRemaining] = useState<number | undefined>(undefined);
+
+  const fetchAiSuggestionRemaining = async () => {
+    const uid = getMyUserUuid() ?? ensureMyUserUuid();
+    if (!uid) return;
+    const remaining = await getAiRequestRemaining(uid, "suggestion");
+    setAiSuggestionRemaining(remaining);
+  };
+
+  useEffect(() => {
+    if (mode === "session" && userId) fetchAiSuggestionRemaining();
+  }, [mode, userId]);
 
   const generateAISuggestions = async (idea: string, kigoVal: string) => {
     if (!idea.trim()) return;
+
+    const uid = getMyUserUuid() ?? ensureMyUserUuid();
+    if (!uid) {
+      alert("ユーザー情報の読み込みに失敗しました。ページを再読み込みしてください。");
+      return;
+    }
+
+    const allowed = await checkAiRateLimit(uid, "suggestion");
+    if (!allowed) {
+      alert(
+        "今日はAIもたくさん考えて疲れちゃったみたいです。少し時間を置いてまた相談してくださいね",
+      );
+      return;
+    }
 
     setIsGeneratingSuggestions(true);
     setShowAISuggest(true);
@@ -470,6 +532,8 @@ export default function HaikuPairApp() {
     try {
       const suggestions = await generateHaikuSuggestions(idea, kigoVal);
       setAiSuggestions(suggestions);
+      await logAiRequest(uid, "suggestion");
+      await fetchAiSuggestionRemaining();
     } catch (error) {
       console.error("AI suggestion error:", error);
       setAiSuggestions([
@@ -794,6 +858,24 @@ export default function HaikuPairApp() {
         return;
       }
 
+      // DBレートリミット: 直近1分に3件以上 or 1日に20件以上で中断
+      const oneMinAgo = new Date(Date.now() - 60 * 1000).toISOString();
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: count1min } = await supabase
+        .from("haikus")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userIdForInsert)
+        .gte("submitted_at", oneMinAgo);
+      const { count: count1day } = await supabase
+        .from("haikus")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userIdForInsert)
+        .gte("submitted_at", oneDayAgo);
+      if ((count1min ?? 0) >= 3 || (count1day ?? 0) >= 20) {
+        alert("少し時間を置いてから投稿してください。");
+        return;
+      }
+
       // image_url: 共有写真。Data URL の場合は Storage にアップロードして公開URLを取得
       const rawImageUrl =
         sharedImageDataUrl ?? (session as { shared_image?: string | null }).shared_image ?? null;
@@ -836,6 +918,12 @@ export default function HaikuPairApp() {
 
       if (upsertError) {
         console.error("[Supabase] haikus upsert failed:", upsertError.message);
+      } else {
+        // 投稿成功：クールダウン開始（localStorage に保存してリロード後も維持）
+        const now = Date.now();
+        setLastHaikuSubmitTimestamp(now);
+        setIsCoolingDown(true);
+        setCoolDownSecondsRemaining(HAIKU_COOLDOWN_SECONDS);
       }
     } catch (e) {
       console.error("[Supabase] unexpected error in submitHaiku:", e);
@@ -1007,6 +1095,7 @@ export default function HaikuPairApp() {
             userIdea={userIdea}
             onUserIdeaChange={setUserIdea}
             onGenerateAISuggestions={generateAISuggestions}
+            aiSuggestionRemaining={aiSuggestionRemaining}
             onSubmitVote={handleVoteCombined}
             onCheckPartnerVote={checkPartnerVote}
             myVote={myVote}
@@ -1033,6 +1122,8 @@ export default function HaikuPairApp() {
             aiSuggestions={aiSuggestions}
             userId={userId}
             isSubmittingHaiku={isSubmittingHaiku}
+            isCoolingDown={isCoolingDown}
+            coolDownSecondsRemaining={coolDownSecondsRemaining}
           />
         );
       case "gallery":
