@@ -85,6 +85,19 @@ export default function HaikuPairApp() {
   // --- 画面モード ---
   const [mode, setMode] = useState<ScreenMode>("home");
 
+  // --- QRリンク（?session=XXX）の自動参加 ---
+  const autoJoinAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (userIdLoading || mode !== "home" || autoJoinAttemptedRef.current) return;
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const sessionParam = params?.get("session")?.trim().toUpperCase();
+    if (!sessionParam || sessionParam.length !== 6) return;
+
+    autoJoinAttemptedRef.current = true;
+    joinSession(sessionParam);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [userIdLoading, mode]);
+
   // --- セッション内ステップ（5ステップウィザード） ---
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 

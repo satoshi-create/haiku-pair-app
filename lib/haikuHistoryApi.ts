@@ -39,20 +39,20 @@ function normalizeTags(tags: unknown): string[] {
 }
 
 /**
- * 自分の俳句履歴を Supabase haikus テーブルから取得。
- * image_url, tags を含む。client_key で自分の participant を特定。
+ * 参加した座の俳句履歴を Supabase から取得（自分＋相手の句を含む）。
+ * client_key で自分の participants を特定し、その session_id に紐づく全俳句を返す。
  */
 export async function fetchHaikuHistory(clientKey: string): Promise<HaikuHistoryEntry[]> {
   if (!clientKey) return [];
 
   try {
-    const { data: participants } = await supabase
+    const { data: myParticipants } = await supabase
       .from("participants")
-      .select("id")
+      .select("session_id")
       .eq("client_key", clientKey);
 
-    const ids = participants?.map((p) => p.id) ?? [];
-    if (ids.length === 0) return [];
+    const sessionIds = [...new Set((myParticipants ?? []).map((p) => p.session_id).filter(Boolean))];
+    if (sessionIds.length === 0) return [];
 
     const { data, error } = await supabase
       .from("haikus")
@@ -62,7 +62,7 @@ export async function fetchHaikuHistory(clientKey: string): Promise<HaikuHistory
         participants(name),
         profiles(display_name)
       `)
-      .in("participant_id", ids)
+      .in("session_id", sessionIds)
       .order("submitted_at", { ascending: false });
 
     if (error) {
