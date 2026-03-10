@@ -1132,6 +1132,7 @@ export default function HaikuPairApp() {
             hostViewingKigoDict={hostViewingKigoDict}
             onKigoDictOpenChange={handleKigoDictOpenChange}
             hasAiSuggestions={aiSuggestions.length > 0}
+            isGeneratingSuggestions={isGeneratingSuggestions}
             aiSuggestions={aiSuggestions}
             userId={userId}
             isSubmittingHaiku={isSubmittingHaiku}

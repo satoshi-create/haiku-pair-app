@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useTransition, useEffect, useMemo, useState } from "react";
 import {
   fetchFamilyHaikus,
   formatOriginDate,
@@ -31,6 +31,11 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [isPending, startTransition] = useTransition();
+
+  const handleViewModeChange = (mode: "list" | "card") => {
+    startTransition(() => setViewMode(mode));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +109,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
         <div className="flex gap-2 mb-6">
           <button
             type="button"
-            onClick={() => setViewMode("list")}
+            disabled={isPending}
+            onClick={() => handleViewModeChange("list")}
             className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors ${
               viewMode === "list"
                 ? "bg-stone-800 text-white"
@@ -115,7 +121,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           </button>
           <button
             type="button"
-            onClick={() => setViewMode("card")}
+            disabled={isPending}
+            onClick={() => handleViewModeChange("card")}
             className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors ${
               viewMode === "card"
                 ? "bg-stone-800 text-white"
@@ -221,7 +228,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             )}
           </ul>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 contain-[layout]">
             {filteredList.length === 0 ? (
               <div className="col-span-full text-xl text-stone-500 py-12 text-center">
                 {selectedTag ? "このタグの句はありません" : "まだ句がありません"}

@@ -200,56 +200,61 @@ export default function GalleryScreen({
               return (
                 <article
                   key={String(entry.id)}
-                  className="flex items-center gap-5 py-5 px-5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 py-4 sm:py-5 px-4 sm:px-5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-colors"
                 >
-                  {entry.image_url ? (
-                    <button
-                      type="button"
-                      onClick={() => setExpandedEntry(entry)}
-                      className="shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
-                      aria-label="画像を拡大"
-                    >
-                      <img src={entry.image_url} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ) : (
-                    <div className={`shrink-0 w-16 h-16 rounded-lg ${getSeasonBgClass(entry.season)} flex items-center justify-center`}>
-                      <span className="text-2xl text-stone-400">📝</span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap">
-                      {entry.haiku.replace(/　/g, " ")}
-                    </p>
-                    <p className="text-sm text-stone-500 mt-2">
-                      {formatDate(entry.date)}　{entry.kigo}（{entry.season}）
-                      {tags.length > 0 && `　${tags.map((t) => `#${t}`).join(" ")}`}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-xs text-stone-400">詠み手：{entry.author}</p>
-                  <div className="shrink-0 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onOpenShareCard(entry.haiku, entry.kigo, entry.season, entry.author)}
-                      className="text-sm bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg hover:bg-stone-300"
-                    >
-                      📤
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onGenerateHaiga(entry.haiku, entry.kigo, entry.season)}
-                      className="text-sm bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg hover:bg-amber-200"
-                    >
-                      🎨
-                    </button>
-                    {typeof entry.id === "number" && (
+                  <div className="flex items-center gap-4 min-w-0">
+                    {entry.image_url ? (
                       <button
                         type="button"
-                        onClick={() => onDeleteEntry(entry.id as number)}
-                        className="text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200"
+                        onClick={() => setExpandedEntry(entry)}
+                        className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                        aria-label="画像を拡大"
                       >
-                        削除
+                        <img src={entry.image_url} alt="" className="w-full h-full object-cover" />
                       </button>
+                    ) : (
+                      <div className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg ${getSeasonBgClass(entry.season)} flex items-center justify-center`}>
+                        <span className="text-xl sm:text-2xl text-stone-400">📝</span>
+                      </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-lg sm:text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap">
+                        {entry.haiku.replace(/　/g, " ")}
+                      </p>
+                      <p className="text-sm text-stone-500 mt-1 sm:mt-2">
+                        {formatDate(entry.date)}　{entry.kigo}（{entry.season}）
+                        {tags.length > 0 && `　${tags.map((t) => `#${t}`).join(" ")}`}
+                      </p>
+                      <p className="text-xs text-stone-400 mt-1 sm:hidden">詠み手：{entry.author}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap border-t border-stone-100 pt-4 sm:pt-0 sm:border-0 shrink-0">
+                    <p className="text-xs text-stone-400 hidden sm:block">詠み手：{entry.author}</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenShareCard(entry.haiku, entry.kigo, entry.season, entry.author)}
+                        className="text-sm bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg hover:bg-stone-300 min-h-[36px]"
+                      >
+                        📤
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onGenerateHaiga(entry.haiku, entry.kigo, entry.season)}
+                        className="text-sm bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg hover:bg-amber-200 min-h-[36px]"
+                      >
+                        🎨
+                      </button>
+                      {typeof entry.id === "number" && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteEntry(entry.id as number)}
+                          className="text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 min-h-[36px]"
+                        >
+                          削除
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </article>
               );

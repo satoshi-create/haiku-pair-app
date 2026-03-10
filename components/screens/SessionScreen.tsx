@@ -55,6 +55,8 @@ interface SessionScreenProps {
   hostViewingKigoDict?: boolean;
   onKigoDictOpenChange?: (open: boolean) => void;
   hasAiSuggestions?: boolean;
+  /** AI句提案の生成中。この間は「AIからの提案（参考）」を非表示にする */
+  isGeneratingSuggestions?: boolean;
   /** 共有された写真（data URL）。参照パネルで表示 */
   sharedImageDataUrl?: string | null;
   /** Step 3 でAI相談した提案一覧。参考として画面上に残す */
@@ -111,6 +113,7 @@ export default function SessionScreen({
   hostViewingKigoDict = false,
   onKigoDictOpenChange,
   hasAiSuggestions = false,
+  isGeneratingSuggestions = false,
   sharedImageDataUrl = null,
   aiSuggestions = [],
   userId = null,
@@ -334,7 +337,7 @@ export default function SessionScreen({
                 />
               </div>
 
-              {hasAiSuggestions && aiSuggestions.length > 0 && (
+              {hasAiSuggestions && aiSuggestions.length > 0 && !isGeneratingSuggestions && (
                 <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
                   <p className="text-sm font-semibold text-stone-800 mb-1">AIからの提案（参考）</p>
                   <ul className="space-y-1">
