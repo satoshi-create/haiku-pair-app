@@ -152,18 +152,18 @@ export default function SessionScreen({
       case 1:
         if (role === 'guest') {
           return (
-            <div className="space-y-6">
-              <div className="bg-white/80 rounded-2xl p-8 border border-stone-200">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="bg-white/80 rounded-2xl p-4 sm:p-6 lg:p-8 border border-stone-200">
                 {!kigo || !kigo.trim() ? (
                   <>
-                    <p className="text-2xl font-semibold text-stone-800 mb-2 text-center">ホストがお題を探しています…</p>
-                    <p className="text-xl text-stone-600 text-center">しばらくお待ちください。</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-stone-800 mb-2 text-center">ホストがお題を探しています…</p>
+                    <p className="text-lg sm:text-xl text-stone-600 text-center">しばらくお待ちください。</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xl font-semibold text-stone-800 mb-2 text-center">今日のお題</p>
-                    <p className="text-3xl font-bold text-stone-800 mb-1 text-center">{kigo}</p>
-                    <p className="text-xl text-stone-500 text-center">（{season}）</p>
+                    <p className="text-lg sm:text-xl font-semibold text-stone-800 mb-2 text-center">今日のお題</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-stone-800 mb-1 text-center">{kigo}</p>
+                    <p className="text-lg sm:text-xl text-stone-500 text-center">（{season}）</p>
                   </>
                 )}
               </div>
@@ -171,7 +171,7 @@ export default function SessionScreen({
                 <button
                   type="button"
                   onClick={() => onStepChange(2)}
-                  className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700"
+                  className="w-full bg-stone-800 text-white text-xl sm:text-2xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700"
                 >
                   次へ
                 </button>
@@ -180,13 +180,13 @@ export default function SessionScreen({
           );
         }
         return (
-          <div className="space-y-6">
-            <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white/80 rounded-2xl p-4 sm:p-6 border border-stone-200">
               {!imageSuggestions ? (
                 <>
                   <label
                     htmlFor="haiku-image-input"
-                    className={`block border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors ${
+                    className={`block border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center cursor-pointer transition-colors ${
                       imageAnalyzing
                         ? 'border-stone-200 bg-stone-50'
                         : 'border-stone-400 hover:border-stone-600 hover:bg-stone-50'
@@ -207,14 +207,14 @@ export default function SessionScreen({
                     />
                     {imageAnalyzing ? (
                       <div>
-                        <p className="text-4xl mb-2">🔍</p>
-                        <p className="text-xl text-stone-500">写真を分析しています…</p>
+                        <p className="text-3xl sm:text-4xl mb-2">🔍</p>
+                        <p className="text-lg sm:text-xl text-stone-500">写真を分析しています…</p>
                       </div>
                     ) : (
                       <div>
-                        <p className="text-5xl mb-3">📸</p>
-                        <p className="text-2xl font-semibold text-stone-800 mb-1">写真から季語を見つける</p>
-                        <p className="text-lg text-stone-500">ここを押して写真を選んでください</p>
+                        <p className="text-4xl sm:text-5xl mb-2 sm:mb-3">📸</p>
+                        <p className="text-xl sm:text-2xl font-semibold text-stone-800 mb-1">写真から季語を見つける</p>
+                        <p className="text-base sm:text-lg text-stone-500">ここを押して写真を選んでください</p>
                       </div>
                     )}
                   </label>
@@ -225,7 +225,7 @@ export default function SessionScreen({
                         onKigoDictOpenChange?.(true);
                         setShowKigoDict(true);
                       }}
-                      className="text-xl text-stone-500 hover:text-stone-700 underline underline-offset-2"
+                      className="text-base sm:text-xl text-stone-500 hover:text-stone-700 underline underline-offset-2"
                     >
                       写真がない場合は 季語辞典から選ぶ
                     </button>
@@ -233,9 +233,9 @@ export default function SessionScreen({
                 </>
               ) : (
                 <>
-                  <p className="text-xl text-stone-700 mb-4">写真からこんな季語が提案されました。</p>
-                  <p className="text-lg text-stone-700 mb-4">{imageSuggestions.scene_description}</p>
-                  <p className="text-xl font-semibold text-stone-800 mb-3">
+                  <p className="text-lg sm:text-xl text-stone-700 mb-3 sm:mb-4">写真からこんな季語が提案されました。</p>
+                  <p className="text-base sm:text-lg text-stone-700 mb-3 sm:mb-4">{imageSuggestions.scene_description}</p>
+                  <p className="text-lg sm:text-xl font-semibold text-stone-800 mb-2 sm:mb-3">
                     提案された季語（{imageSuggestions.season}）からお題を選ぶ：
                   </p>
                   <div className="flex flex-wrap gap-3">
@@ -247,13 +247,13 @@ export default function SessionScreen({
                           onConfirmKigoFromPhoto(k, imageSuggestions.season);
                           onStepChange(2);
                         }}
-                        className="px-5 py-3 rounded-xl bg-amber-100 text-amber-800 text-xl font-semibold hover:bg-amber-200 border border-amber-200"
+                        className="px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-amber-100 text-amber-800 text-base sm:text-xl font-semibold hover:bg-amber-200 border border-amber-200"
                       >
                         {k}
                       </button>
                     ))}
                   </div>
-                  <ul className="list-disc pl-6 space-y-1 text-lg text-stone-700 mt-4">
+                  <ul className="list-disc pl-5 sm:pl-6 space-y-1 text-base sm:text-lg text-stone-700 mt-3 sm:mt-4">
                     {imageSuggestions.haiku_hints.map((h, idx) => (
                       <li key={idx}>{h}</li>
                     ))}
@@ -265,7 +265,7 @@ export default function SessionScreen({
                         onKigoDictOpenChange?.(true);
                         setShowKigoDict(true);
                       }}
-                      className="w-full py-3 rounded-xl border border-stone-300 text-stone-600 text-xl hover:bg-stone-50 hover:text-stone-800"
+                      className="w-full py-3 rounded-xl border border-stone-300 text-stone-600 text-base sm:text-xl hover:bg-stone-50 hover:text-stone-800"
                     >
                       気に入った季語がない場合は 季語辞典から探す
                     </button>
@@ -278,7 +278,7 @@ export default function SessionScreen({
               type="button"
               disabled={!kigo || imageAnalyzing}
               onClick={() => onStepChange(2)}
-              className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-stone-800 text-white text-xl sm:text-2xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               句を詠む
             </button>
@@ -287,9 +287,9 @@ export default function SessionScreen({
 
       case 2:
         return (
-          <div className="space-y-4">
-            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
-              <p className="text-lg text-stone-800 font-semibold mb-2">あなたの句</p>
+          <div className="space-y-4 sm:space-y-5">
+            <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
+              <p className="text-base sm:text-lg text-stone-800 font-semibold mb-2 sm:mb-3">あなたの句</p>
               <p className="text-sm text-stone-400 mb-2" aria-hidden>
                 （ご家族の句より：{SAMPLE_FAMILY_HAIKU.replace(/　/g, ' ')}）
               </p>
@@ -300,7 +300,7 @@ export default function SessionScreen({
                   onSetSubmitted(false);
                 }}
                 placeholder={'思いついた言葉から、気楽に書きはじめてみましょう。'}
-                className="w-full p-4 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-xl text-stone-900 placeholder:text-stone-500"
+                className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500 scroll-mt-24"
               />
               {myHaiku && (
                 <div className="mt-3">
@@ -313,7 +313,7 @@ export default function SessionScreen({
               type="button"
               disabled={!myHaiku.trim()}
               onClick={() => onStepChange(3)}
-              className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-stone-800 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               AIに相談する前へ
             </button>
@@ -322,15 +322,15 @@ export default function SessionScreen({
 
       case 3:
         return (
-          <div className="space-y-4">
-            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
-              <p className="text-lg font-semibold text-stone-800 mb-2">今の句を、もう一息よくしましょう。</p>
-              <p className="text-base text-stone-700 mb-3">
+          <div className="space-y-4 sm:space-y-5">
+            <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
+              <p className="text-base sm:text-lg font-semibold text-stone-800 mb-2 sm:mb-3">今の句を、もう一息よくしましょう。</p>
+              <p className="text-sm sm:text-base text-stone-700 mb-3">
                 言い換えの案や、ことばの並べ方をAIにたずねてみることができます。
               </p>
 
-              <div className="mb-3">
-                <p className="text-base text-stone-700 mb-1">いまの句（編集できます）</p>
+              <div className="mb-3 sm:mb-4">
+                <p className="text-sm sm:text-base text-stone-700 mb-1 sm:mb-2">いまの句（編集できます）</p>
                 <textarea
                   value={myHaiku}
                   onChange={(e) => {
@@ -338,12 +338,12 @@ export default function SessionScreen({
                     onSetSubmitted(false);
                   }}
                   placeholder="句を入力してください"
-                  className="w-full p-4 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[80px] text-xl text-stone-900 placeholder:text-stone-500"
+                  className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[80px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500 scroll-mt-24"
                 />
               </div>
 
               {hasAiSuggestions && aiSuggestions.length > 0 && !isGeneratingSuggestions && (
-                <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <div className="mb-4 p-3 sm:p-4 rounded-xl bg-amber-50 border border-amber-200">
                   <p className="text-sm font-semibold text-stone-800 mb-1">AIからの提案（参考）</p>
                   <ul className="space-y-1">
                     {aiSuggestions.map((s, idx) => (
@@ -365,7 +365,7 @@ export default function SessionScreen({
                   type="button"
                   disabled={!myHaiku.trim() || (typeof aiSuggestionRemaining === 'number' && aiSuggestionRemaining <= 0)}
                   onClick={() => onGenerateAISuggestions(myHaiku, kigo)}
-                  className="w-full bg-amber-600 text-white text-xl py-3 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-amber-600 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {hasAiSuggestions ? '別の提案をみる' : 'AIに相談する'}
                 </button>
@@ -374,7 +374,7 @@ export default function SessionScreen({
               <button
                 type="button"
                 onClick={() => onStepChange(4)}
-                className="mt-3 w-full text-lg text-stone-600 hover:text-stone-800 py-2.5"
+                className="mt-3 w-full text-base sm:text-lg text-stone-600 hover:text-stone-800 py-2.5 sm:py-3"
               >
                 {hasAiSuggestions ? 'このヒントをもとに直す' : '今の提案を参考にして次へ進む'}
               </button>
@@ -384,11 +384,11 @@ export default function SessionScreen({
 
       case 4:
         return (
-          <div className="space-y-4">
-            <div className="bg-white/80 rounded-2xl p-4 border border-stone-200">
-              <p className="text-lg text-stone-700 mb-2">この句でよろしければ、みんなに送信します。</p>
-              <div className="bg-stone-50 rounded-xl p-4 border border-stone-200">
-                <p className="text-xl text-stone-800 leading-relaxed whitespace-pre-wrap">
+          <div className="space-y-4 sm:space-y-5">
+            <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
+              <p className="text-base sm:text-lg text-stone-700 mb-2 sm:mb-3">この句でよろしければ、みんなに送信します。</p>
+              <div className="bg-stone-50 rounded-xl p-4 sm:p-5 border border-stone-200">
+                <p className="text-lg sm:text-xl text-stone-800 leading-relaxed whitespace-pre-wrap">
                   {myHaiku || 'まだ句が書かれていません。'}
                 </p>
               </div>
@@ -401,7 +401,7 @@ export default function SessionScreen({
                 onSubmitHaiku();
                 onStepChange(5);
               }}
-              className="w-full bg-stone-800 text-white text-xl py-3 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-stone-800 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmittingHaiku
                 ? "保存中..."
@@ -416,17 +416,17 @@ export default function SessionScreen({
 
       case 5:
         return (
-          <div className="space-y-6">
-            <div className="bg-white/80 rounded-2xl p-6 border border-stone-200">
-              <p className="text-xl text-stone-700 mb-4">二人の句を、ならべて味わいましょう。</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-stone-50 rounded-xl p-5 border border-stone-200">
-                  <p className="text-base text-stone-500 mb-2">あなたの句</p>
-                  <p className="text-2xl text-stone-800 whitespace-pre-wrap">{myHaiku}</p>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white/80 rounded-2xl p-4 sm:p-6 border border-stone-200">
+              <p className="text-lg sm:text-xl text-stone-700 mb-3 sm:mb-4">二人の句を、ならべて味わいましょう。</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-stone-50 rounded-xl p-4 sm:p-5 border border-stone-200">
+                  <p className="text-sm sm:text-base text-stone-500 mb-2">あなたの句</p>
+                  <p className="text-xl sm:text-2xl text-stone-800 whitespace-pre-wrap">{myHaiku}</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-5 border border-stone-200">
-                  <p className="text-base text-stone-500 mb-2">相手の句</p>
-                  <p className="text-2xl text-stone-800 whitespace-pre-wrap">
+                <div className="bg-stone-50 rounded-xl p-4 sm:p-5 border border-stone-200">
+                  <p className="text-sm sm:text-base text-stone-500 mb-2">相手の句</p>
+                  <p className="text-xl sm:text-2xl text-stone-800 whitespace-pre-wrap">
                     {showPartner || partnerHaiku ? partnerHaiku || 'まだ届いていません。' : '「相手の句を読み込む」を押してください。'}
                   </p>
                 </div>
@@ -437,7 +437,7 @@ export default function SessionScreen({
               <button
                 type="button"
                 onClick={() => onGenerateHaiga(myHaiku, kigo)}
-                className="w-full bg-amber-500 text-white text-2xl py-4 rounded-2xl hover:bg-amber-600 font-semibold"
+                className="w-full bg-amber-500 text-white text-xl sm:text-2xl py-3 sm:py-4 rounded-2xl hover:bg-amber-600 font-semibold"
               >
                 🎨 この句で俳画（絵）を作る
               </button>
@@ -446,7 +446,7 @@ export default function SessionScreen({
             <button
               type="button"
               onClick={onCheckPartner}
-              className="w-full bg-stone-800 text-white text-2xl py-4 rounded-2xl hover:bg-stone-700"
+              className="w-full bg-stone-800 text-white text-xl sm:text-2xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700"
             >
               相手の句を読み込む
             </button>
@@ -454,7 +454,7 @@ export default function SessionScreen({
             <button
               type="button"
               onClick={onGoHome}
-              className="w-full text-xl text-stone-600 hover:text-stone-800"
+              className="w-full text-lg sm:text-xl text-stone-600 hover:text-stone-800 py-2"
             >
               座を終えてホームに戻る
             </button>
@@ -465,29 +465,30 @@ export default function SessionScreen({
 
   return (
     <div className="relative space-y-6">
-      <div className="bg-white/80 backdrop-blur rounded-2xl p-8 shadow-lg border border-stone-200">
-        {/* ヘッダー：お題 と 季語辞典 */}
-        <div className="flex items-start justify-between mb-4">
+      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-stone-200 overflow-hidden flex flex-col">
+        {/* ヘッダー：お題 と 季語辞典（sticky） */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-stone-200/80 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 [touch-action:pan-y]">
+          <div className="flex items-start justify-between mb-4">
           <div>
-            <p className="text-base text-stone-600 mb-1">
+            <p className="text-sm sm:text-base text-stone-600 mb-1">
               {role === 'host' ? '主' : '客'}：{userName}
             </p>
             {activeStep !== 1 && kigo && kigo.trim() ? (
               <>
-                <p className="text-3xl font-bold text-stone-800 mb-1">{kigo}</p>
-                <p className="text-base text-stone-500">（{season}）</p>
+                <p className="text-2xl sm:text-3xl font-bold text-stone-800 mb-1">{kigo}</p>
+                <p className="text-sm sm:text-base text-stone-500">（{season}）</p>
               </>
             ) : activeStep !== 1 ? (
-              <p className="text-xl text-stone-600">お題が決まるまでお待ちください</p>
+              <p className="text-lg sm:text-xl text-stone-600">お題が決まるまでお待ちください</p>
             ) : null}
-            <p className="mt-2 text-base text-stone-500">セッションID：{sessionId}</p>
+            <p className="mt-2 text-xs sm:text-sm text-stone-500">セッションID：{sessionId}</p>
           </div>
           {activeStep !== 1 && kigo && (
             <div className="flex flex-wrap gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setShowFamilyGallery(true)}
-                className="flex items-center gap-2 text-xl bg-amber-50 text-amber-900 border border-amber-200 px-5 py-3 rounded-xl hover:bg-amber-100 font-semibold"
+                className="flex items-center gap-2 text-base sm:text-lg lg:text-xl bg-amber-50 text-amber-900 border border-amber-200 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl hover:bg-amber-100 font-semibold"
               >
                 <span aria-hidden>📒</span>
                 <span>家族の句</span>
@@ -495,68 +496,71 @@ export default function SessionScreen({
               <button
                 type="button"
                 onClick={() => setShowKigoDict(true)}
-                className="flex items-center gap-2 text-xl bg-green-100 text-green-800 px-5 py-3 rounded-xl hover:bg-green-200 font-semibold"
+                className="flex items-center gap-2 text-base sm:text-lg lg:text-xl bg-green-100 text-green-800 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl hover:bg-green-200 font-semibold"
               >
                 <span aria-hidden>📖</span>
                 <span>季語辞典</span>
               </button>
             </div>
           )}
-        </div>
+          </div>
 
-        {/* 共有バナー（Step 2,3,4 かつ 写真 or ヒントあり） */}
-        {(activeStep === 2 || activeStep === 3 || activeStep === 4) &&
-          (sharedImageDataUrl || imageSuggestions) && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => setShowEnlargedPhoto(true)}
-                className="w-full flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/90 p-2.5 text-left hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400"
-                aria-label="散歩の写真とヒントを拡大表示"
-              >
-                {sharedImageDataUrl && (
-                  <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-stone-200 bg-stone-100">
-                    <img
-                      src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_THUMB_WIDTH)}
-                      alt=""
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-stone-800 mb-0.5">
-                    📸 散歩の写真を見る（タップで拡大）
-                  </p>
-                  {imageSuggestions && (
-                    <p className="text-sm text-stone-700 line-clamp-2 leading-snug">
-                      {imageSuggestions.scene_description}
-                    </p>
+          {/* 共有バナー（Step 2,3,4 かつ 写真 or ヒントあり） */}
+          {(activeStep === 2 || activeStep === 3 || activeStep === 4) &&
+            (sharedImageDataUrl || imageSuggestions) && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEnlargedPhoto(true)}
+                  className="w-full flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/90 p-2.5 sm:p-3 text-left hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                  aria-label="散歩の写真とヒントを拡大表示"
+                >
+                  {sharedImageDataUrl && (
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-lg overflow-hidden border border-stone-200 bg-stone-100">
+                      <img
+                        src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_THUMB_WIDTH)}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   )}
-                </div>
-              </button>
-            </div>
-          )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-stone-800 mb-0.5">
+                      📸 散歩の写真を見る（タップで拡大）
+                    </p>
+                    {imageSuggestions && (
+                      <p className="text-xs sm:text-sm text-stone-700 line-clamp-2 leading-snug">
+                        {imageSuggestions.scene_description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              </div>
+            )}
 
-        {/* ステップインジケータ */}
-        <div className="mb-6">
-          <p className="text-xl font-semibold text-stone-800 mb-2">
-            Step {activeStep} / 5 ：{stepLabel(activeStep)}
-          </p>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div
-                key={s}
-                className={`h-2 flex-1 rounded-full ${
-                  s <= activeStep ? 'bg-stone-800' : 'bg-stone-200'
-                }`}
-              />
-            ))}
+          {/* ステップインジケータ */}
+          <div className="mb-0">
+            <p className="text-base sm:text-lg lg:text-xl font-semibold text-stone-800 mb-2">
+              Step {activeStep} / 5 ：{stepLabel(activeStep)}
+            </p>
+            <div className="flex gap-1.5 sm:gap-2">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <div
+                  key={s}
+                  className={`h-2 flex-1 rounded-full ${
+                    s <= activeStep ? 'bg-stone-800' : 'bg-stone-200'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* ステップごとの内容 */}
-        {renderStepContent()}
+        {/* ステップごとの内容（スクロール域） */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-4 flex-1">
+          {renderStepContent()}
+        </div>
       </div>
 
       {/* 拡大表示モーダル：写真＋ヒント全文 */}

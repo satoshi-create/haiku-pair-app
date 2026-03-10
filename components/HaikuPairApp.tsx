@@ -1156,17 +1156,20 @@ export default function HaikuPairApp() {
   // ユーザーID読み込み中はローディング表示。未確定のままセッション画面へ進まない。
   if (userIdLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-stone-100 to-amber-50 flex items-center justify-center p-4">
+      <div className="h-dvh min-h-dvh overflow-hidden bg-linear-to-b from-stone-100 to-amber-50 flex items-center justify-center px-2 sm:px-4">
         <div className="text-center">
-          <p className="text-2xl text-stone-600 animate-pulse">読み込み中…</p>
+          <p className="text-xl sm:text-2xl text-stone-600 animate-pulse">読み込み中…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-100 to-amber-50 flex items-center justify-center p-4">
-      <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>
+    <div className="h-dvh min-h-dvh overflow-hidden bg-linear-to-b from-stone-100 to-amber-50 flex flex-col">
+      <div
+        className={`flex-1 overflow-y-auto overflow-x-hidden touch-pan-y px-2 sm:px-4 py-4 flex justify-center min-h-0`}
+      >
+        <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>
         {renderScreen()}
 
         {/* モーダル群 */}
@@ -1203,6 +1206,7 @@ export default function HaikuPairApp() {
           onClose={() => setShowShareCard(false)}
         />
 
+        </div>
       </div>
     </div>
   );

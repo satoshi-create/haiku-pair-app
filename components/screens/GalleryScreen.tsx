@@ -107,15 +107,17 @@ export default function GalleryScreen({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/80 backdrop-blur rounded-2xl p-8 shadow-lg border border-stone-200">
-        <h2 className="text-2xl font-bold text-stone-800 mb-6 text-center">
-          📚 句の履歴
-        </h2>
+      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
+        {/* ヘッダー・フィルター（sticky） */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-stone-200/80 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 [touch-action:pan-y]">
+          <h2 className="text-xl sm:text-2xl font-bold text-stone-800 mb-4 sm:mb-6 text-center">
+            📚 句の履歴
+          </h2>
 
-        {!loading && displayList.length > 0 && (
-          <>
-            {/* 表示形式切り替え & フィルターチップ */}
-            <div className="flex flex-col gap-4 mb-6">
+          {!loading && displayList.length > 0 && (
+            <>
+              {/* 表示形式切り替え & フィルターチップ */}
+              <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <button
@@ -185,15 +187,18 @@ export default function GalleryScreen({
             </div>
           </>
         )}
+        </div>
 
+        {/* スクロール可能なコンテンツ */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-4">
         {loading ? (
-          <p className="text-xl text-stone-600 py-12 text-center">読み込み中...</p>
+          <p className="text-lg sm:text-xl text-stone-600 py-12 text-center">読み込み中...</p>
         ) : filteredList.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-stone-600 text-xl mb-2">
+            <p className="text-stone-600 text-lg sm:text-xl mb-2">
               {displayList.length === 0 ? "まだ句がありません" : "該当する句がありません"}
             </p>
-            <p className="text-stone-500 text-lg">
+            <p className="text-stone-500 text-base sm:text-lg">
               {displayList.length === 0 ? "句会で詠んだ句がここに残ります" : "別のフィルターを試してください"}
             </p>
           </div>
@@ -301,8 +306,8 @@ export default function GalleryScreen({
                       <span className="text-5xl text-stone-300">📝</span>
                     )}
                   </div>
-                  <div className="p-6 flex-1">
-                    <p className="text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap mb-4">
+                  <div className="p-4 sm:p-5 lg:p-6 flex-1">
+                    <p className="text-xl sm:text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap mb-3 sm:mb-4">
                       {entry.haiku.replace(/　/g, " ")}
                     </p>
                   </div>
@@ -367,10 +372,11 @@ export default function GalleryScreen({
           <button
             type="button"
             onClick={onGoHome}
-            className="w-full min-h-[44px] text-xl text-stone-600 hover:text-stone-800 py-4 font-semibold"
+            className="w-full min-h-[44px] text-lg sm:text-xl text-stone-600 hover:text-stone-800 py-3 sm:py-4 font-semibold"
           >
             ホームに戻る
           </button>
+        </div>
         </div>
       </div>
 
