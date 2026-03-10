@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCloudinaryUrl,
-  CLOUDINARY_THUMB_WIDTH,
   CLOUDINARY_ZOOM_WIDTH,
 } from "@/lib/cloudinary";
 import {
@@ -96,33 +95,60 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   }, [list, selectedTag]);
 
   // カード表示の段階的レンダリング（低スペック端末でのフリーズを防ぐ）
-  const INITIAL_BATCH = 16;
-  const BATCH_SIZE = 8;
-  const BATCH_DELAY_MS = 50;
+  const INITIAL_BATCH = 4;
+  const BATCH_SIZE = 4;
+  const BATCH_DELAY_MS = 200;
   const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
+  const lastBatchLoadedRef = useRef(false);
 
   useEffect(() => {
     setVisibleCount(INITIAL_BATCH);
+    lastBatchLoadedRef.current = false;
   }, [viewMode, selectedTag]);
 
-  useEffect(() => {
-    // モーダル表示中はバッチ追加を止め、選択イベントがデータ更新を誘発しないようガード
+  const scheduleNextBatch = useCallback(() => {
     if (
       viewMode !== "card" ||
       filteredList.length <= visibleCount ||
+      expandedImageUrl != null ||
+      lastBatchLoadedRef.current
+    )
+      return;
+    lastBatchLoadedRef.current = true;
+    window.setTimeout(() => {
+      setVisibleCount((prev) => {
+        const next = Math.min(prev + BATCH_SIZE, filteredList.length);
+        lastBatchLoadedRef.current = next >= filteredList.length;
+        return next;
+      });
+    }, BATCH_DELAY_MS);
+  }, [viewMode, filteredList.length, visibleCount, expandedImageUrl]);
+
+  const handleLastCardImageLoad = useCallback(() => {
+    scheduleNextBatch();
+  }, [scheduleNextBatch]);
+
+  const visibleList = viewMode === "card" ? filteredList.slice(0, visibleCount) : filteredList;
+
+  // 最後のカードに画像がない場合のフォールバック：BATCH_DELAY_MS 後に次を追加
+  useEffect(() => {
+    if (
+      viewMode !== "card" ||
+      visibleCount >= filteredList.length ||
       expandedImageUrl != null
     )
       return;
-    const id = window.setTimeout(
-      () => {
-        setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredList.length));
-      },
-      BATCH_DELAY_MS,
-    );
+    const lastRow = visibleList[visibleList.length - 1];
+    if (lastRow?.image_url) return;
+    const id = window.setTimeout(() => {
+      setVisibleCount((prev) => {
+        const next = Math.min(prev + BATCH_SIZE, filteredList.length);
+        lastBatchLoadedRef.current = next >= filteredList.length;
+        return next;
+      });
+    }, BATCH_DELAY_MS);
     return () => clearTimeout(id);
-  }, [viewMode, filteredList.length, visibleCount, expandedImageUrl]);
-
-  const visibleList = viewMode === "card" ? filteredList.slice(0, visibleCount) : filteredList;
+  }, [viewMode, visibleCount, filteredList.length, visibleList, expandedImageUrl]);
 
   if (loading) {
     return (
@@ -251,7 +277,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           <img
-                            src={getCloudinaryUrl(row.image_url, CLOUDINARY_THUMB_WIDTH)}
+                            src={getCloudinaryUrl(row.image_url, 400, "gallery")}
                             alt=""
                             loading="lazy"
                             className="w-full h-full object-cover"
@@ -289,18 +315,20 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             )}
           </ul>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full [content-visibility:auto]">
             {filteredList.length === 0 ? (
               <div className="col-span-full text-xl text-stone-500 py-12 text-center">
                 {selectedTag ? "このタグの句はありません" : "まだ句がありません"}
               </div>
             ) : (
-              visibleList.map((row) => {
+              visibleList.map((row, idx) => {
                 const tags = normalizeTags(row.tags);
+                const isLastCard = idx === visibleList.length - 1;
+                const shouldTriggerOnLoad = isLastCard && visibleCount < filteredList.length;
                 return (
                   <article
                     key={row.id}
-                    className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0"
+                    className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0 [content-visibility:auto]"
                   >
                     {/* 上部: 写真（正方形・object-cover） */}
                     <div className="aspect-square w-full bg-stone-200">
@@ -315,10 +343,11 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           <img
-                            src={getCloudinaryUrl(row.image_url, CLOUDINARY_THUMB_WIDTH)}
+                            src={getCloudinaryUrl(row.image_url, 400, "gallery")}
                             alt=""
                             loading="lazy"
-                            className="w-full h-full object-cover"
+                            onLoad={shouldTriggerOnLoad ? handleLastCardImageLoad : undefined}
+                            className="w-full h-full object-cover transition-opacity duration-300"
                           />
                         </button>
                       ) : (

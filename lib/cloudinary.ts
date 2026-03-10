@@ -16,7 +16,13 @@ export const CLOUDINARY_ZOOM_WIDTH = 1200;
  * @param url 画像URL（Cloudinary / Supabase / data: 等）
  * @param width 幅（px）。一覧用 400、拡大用 1200 など
  */
-export function getCloudinaryUrl(url: string | null | undefined, width = CLOUDINARY_THUMB_WIDTH): string {
+export type CloudinaryPreset = "default" | "gallery";
+
+export function getCloudinaryUrl(
+  url: string | null | undefined,
+  width = CLOUDINARY_THUMB_WIDTH,
+  preset: CloudinaryPreset = "default",
+): string {
   if (!url || typeof url !== "string") return url ?? "";
 
   // Data URL（data:image/...）や Supabase 等は変換しない
@@ -24,8 +30,10 @@ export function getCloudinaryUrl(url: string | null | undefined, width = CLOUDIN
     return url;
   }
 
-  // /upload/ の直後に変換パラメータを挿入
-  const transform = `f_auto,q_auto,w_${width},c_limit`;
+  const transform =
+    preset === "gallery"
+      ? "f_auto,q_auto:eco,w_300,c_scale"
+      : `f_auto,q_auto,w_${width},c_limit`;
   if (url.includes("/upload/")) {
     return url.replace("/upload/", `/upload/${transform}/`);
   }

@@ -2,7 +2,6 @@
 
 import {
   getCloudinaryUrl,
-  CLOUDINARY_THUMB_WIDTH,
   CLOUDINARY_ZOOM_WIDTH,
 } from "@/lib/cloudinary";
 import {
@@ -218,7 +217,7 @@ export default function GalleryScreen({
                         className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
                         aria-label="画像を拡大"
                       >
-                        <img src={getCloudinaryUrl(entry.image_url, CLOUDINARY_THUMB_WIDTH)} alt="" loading="lazy" className="w-full h-full object-cover" />
+                        <img src={getCloudinaryUrl(entry.image_url, 400, "gallery")} alt="" loading="lazy" className="w-full h-full object-cover" />
                       </button>
                     ) : (
                       <div className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg ${getSeasonBgClass(entry.season)} flex items-center justify-center`}>
@@ -269,14 +268,14 @@ export default function GalleryScreen({
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full [content-visibility:auto]">
             {filteredList.map((entry) => {
               const seasonBg = getSeasonBgClass(entry.season);
               const tags = Array.isArray(entry.tags) ? entry.tags : [];
               return (
                 <article
                   key={String(entry.id)}
-                  className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0"
+                  className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0 [content-visibility:auto]"
                 >
                   <div
                     className={`aspect-4/3 w-full ${entry.image_url ? "bg-stone-200" : seasonBg} flex items-center justify-center`}
@@ -292,7 +291,7 @@ export default function GalleryScreen({
                         aria-label="画像を拡大"
                       >
                         <img
-                          src={getCloudinaryUrl(entry.image_url, CLOUDINARY_THUMB_WIDTH)}
+                          src={getCloudinaryUrl(entry.image_url, 400, "gallery")}
                           alt=""
                           loading="lazy"
                           className="w-full h-full object-cover"
