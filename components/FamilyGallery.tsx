@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchFamilyHaikus,
   formatOriginDate,
@@ -31,11 +31,32 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
-  const [isPending, startTransition] = useTransition();
+  /** ゴーストクリック対策：切り替え直後のクールダウン（ms） */
+  const [switchCooldown, setSwitchCooldown] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleViewModeChange = (mode: "list" | "card") => {
-    startTransition(() => setViewMode(mode));
-  };
+  const handleViewModeChange = useCallback(
+    (mode: "list" | "card") => {
+      if (mode === viewMode) return;
+      if (cooldownTimerRef.current) {
+        clearTimeout(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+      setSwitchCooldown(true);
+      setViewMode(mode);
+      cooldownTimerRef.current = setTimeout(() => {
+        setSwitchCooldown(false);
+        cooldownTimerRef.current = null;
+      }, 400);
+    },
+    [viewMode],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,9 +90,10 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     });
   }, [list, selectedTag]);
 
-  // カード表示の段階的レンダリング（全件一括でフリーズするのを防ぐ）
-  const INITIAL_BATCH = 24;
-  const BATCH_SIZE = 12;
+  // カード表示の段階的レンダリング（低スペック端末でのフリーズを防ぐ）
+  const INITIAL_BATCH = 16;
+  const BATCH_SIZE = 8;
+  const BATCH_DELAY_MS = 50;
   const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
 
   useEffect(() => {
@@ -80,20 +102,13 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
 
   useEffect(() => {
     if (viewMode !== "card" || filteredList.length <= visibleCount) return;
-    const cb = () => {
-      setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredList.length));
-    };
-    const id =
-      typeof requestIdleCallback !== "undefined"
-        ? requestIdleCallback(cb)
-        : window.setTimeout(cb, 1);
-    return () => {
-      if (typeof cancelIdleCallback !== "undefined") {
-        cancelIdleCallback(id as number);
-      } else {
-        clearTimeout(id);
-      }
-    };
+    const id = window.setTimeout(
+      () => {
+        setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredList.length));
+      },
+      BATCH_DELAY_MS,
+    );
+    return () => clearTimeout(id);
   }, [viewMode, filteredList.length, visibleCount]);
 
   const visibleList = viewMode === "card" ? filteredList.slice(0, visibleCount) : filteredList;
@@ -134,13 +149,13 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           </button>
         </div>
 
-        {/* 表示切り替えトグル（タイトルとタグフィルターの間） */}
-        <div className="flex gap-2 mb-6">
+        {/* 表示切り替えトグル（sticky でレイアウトシフト時の誤タップを防ぐ、touch-action でゴーストクリック軽減） */}
+        <div className="sticky top-0 z-10 flex gap-2 mb-6 py-2 -mx-2 px-2 bg-white/95 backdrop-blur-sm -mt-2 touch-manipulation">
           <button
             type="button"
-            disabled={isPending}
+            disabled={switchCooldown}
             onClick={() => handleViewModeChange("list")}
-            className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors ${
+            className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors touch-manipulation ${
               viewMode === "list"
                 ? "bg-stone-800 text-white"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
@@ -150,9 +165,9 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           </button>
           <button
             type="button"
-            disabled={isPending}
+            disabled={switchCooldown}
             onClick={() => handleViewModeChange("card")}
-            className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors ${
+            className={`min-h-[44px] px-5 rounded-xl text-lg font-semibold transition-colors touch-manipulation ${
               viewMode === "card"
                 ? "bg-stone-800 text-white"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
@@ -258,7 +273,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             )}
           </ul>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 contain-[layout]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredList.length === 0 ? (
               <div className="col-span-full text-xl text-stone-500 py-12 text-center">
                 {selectedTag ? "このタグの句はありません" : "まだ句がありません"}
