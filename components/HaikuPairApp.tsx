@@ -1167,9 +1167,10 @@ export default function HaikuPairApp() {
   return (
     <div className="h-dvh min-h-dvh overflow-hidden bg-linear-to-b from-stone-100 to-amber-50 flex flex-col">
       <div
-        className={`flex-1 overflow-y-auto overflow-x-hidden touch-pan-y px-2 sm:px-4 py-4 flex justify-center min-h-0`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden touch-pan-y px-2 sm:px-4 py-4 min-h-0`}
       >
-        <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>
+        <div className="min-h-full flex flex-col items-center justify-center py-8 sm:py-10">
+          <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>
         {renderScreen()}
 
         {/* モーダル群 */}
@@ -1206,6 +1207,7 @@ export default function HaikuPairApp() {
           onClose={() => setShowShareCard(false)}
         />
 
+          </div>
         </div>
       </div>
     </div>

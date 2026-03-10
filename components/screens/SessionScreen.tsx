@@ -6,7 +6,7 @@ import {
 } from '@/lib/cloudinary';
 import KigoDictScreen from '@/components/screens/KigoDictScreen';
 import MoraCounter from '@/components/shared/MoraCounter';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /** ご家族の句（母_俳句.csv より）。Step 2 で背景のささやきとして表示 */
 const SAMPLE_FAMILY_HAIKU = '苗床に　朝の陽集め　露の網';
@@ -130,6 +130,15 @@ export default function SessionScreen({
   const [showKigoDict, setShowKigoDict] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
   const [showEnlargedPhoto, setShowEnlargedPhoto] = useState(false);
+  /** Step 3: AI提案アコーディオンの開閉（デフォルトは閉じた状態） */
+  const [aiSuggestionsOpen, setAiSuggestionsOpen] = useState(false);
+
+  /** 新しいAI提案が来たらアコーディオンを閉じる */
+  useEffect(() => {
+    if (hasAiSuggestions && aiSuggestions.length > 0) {
+      setAiSuggestionsOpen(false);
+    }
+  }, [aiSuggestions, hasAiSuggestions]);
 
   const stepLabel = (step: 1 | 2 | 3 | 4 | 5) => {
     if (step === 1 && role === 'guest') return 'ホストのお題を待つ';
@@ -322,15 +331,15 @@ export default function SessionScreen({
 
       case 3:
         return (
-          <div className="space-y-4 sm:space-y-5">
-            <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
+          <div className="space-y-5 sm:space-y-6">
+            <div className="bg-white/80 rounded-2xl p-5 sm:p-6 lg:p-8 border border-stone-200">
               <p className="text-base sm:text-lg font-semibold text-stone-800 mb-2 sm:mb-3">今の句を、もう一息よくしましょう。</p>
-              <p className="text-sm sm:text-base text-stone-700 mb-3">
+              <p className="text-sm sm:text-base text-stone-700 mb-4 sm:mb-5">
                 言い換えの案や、ことばの並べ方をAIにたずねてみることができます。
               </p>
 
-              <div className="mb-3 sm:mb-4">
-                <p className="text-sm sm:text-base text-stone-700 mb-1 sm:mb-2">いまの句（編集できます）</p>
+              <div className="mb-5 sm:mb-6">
+                <p className="text-sm sm:text-base text-stone-700 mb-2 sm:mb-3">いまの句（編集できます）</p>
                 <textarea
                   value={myHaiku}
                   onChange={(e) => {
@@ -343,19 +352,39 @@ export default function SessionScreen({
               </div>
 
               {hasAiSuggestions && aiSuggestions.length > 0 && !isGeneratingSuggestions && (
-                <div className="mb-4 p-3 sm:p-4 rounded-xl bg-amber-50 border border-amber-200">
-                  <p className="text-sm font-semibold text-stone-800 mb-1">AIからの提案（参考）</p>
-                  <ul className="space-y-1">
-                    {aiSuggestions.map((s, idx) => (
-                      <li key={idx} className="text-base text-stone-700 pl-3 border-l-2 border-amber-300">
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
+                <div className="mb-5 sm:mb-6 rounded-xl border border-amber-200 overflow-hidden bg-amber-50/80">
+                  <button
+                    type="button"
+                    onClick={() => setAiSuggestionsOpen((o) => !o)}
+                    className="w-full flex items-center justify-between gap-3 p-3 sm:p-4 text-left hover:bg-amber-100/80 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-inset"
+                    aria-expanded={aiSuggestionsOpen}
+                  >
+                    <span className="text-sm sm:text-base font-semibold text-stone-800">
+                      AIからの提案（参考）　{aiSuggestionsOpen ? 'クリックで閉じる' : 'クリックで開く'}
+                    </span>
+                    <span className="shrink-0 text-lg text-amber-700" aria-hidden>
+                      {aiSuggestionsOpen ? '△' : '▽'}
+                    </span>
+                  </button>
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-200 ease-out ${aiSuggestionsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                  >
+                    <div className="min-h-0 overflow-hidden">
+                      <div className="max-h-[40dvh] overflow-y-auto p-3 sm:p-4 pt-0 border-t border-amber-200/80">
+                        <ul className="space-y-2 sm:space-y-3">
+                          {aiSuggestions.map((s, idx) => (
+                            <li key={idx} className="text-base sm:text-lg text-stone-700 pl-3 border-l-2 border-amber-300">
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {typeof aiSuggestionRemaining === 'number' && (
                   <p className="text-sm text-stone-600">
                     残り相談回数：{aiSuggestionRemaining}回
@@ -365,7 +394,7 @@ export default function SessionScreen({
                   type="button"
                   disabled={!myHaiku.trim() || (typeof aiSuggestionRemaining === 'number' && aiSuggestionRemaining <= 0)}
                   onClick={() => onGenerateAISuggestions(myHaiku, kigo)}
-                  className="w-full bg-amber-600 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-amber-600 text-white text-lg sm:text-xl py-3.5 sm:py-4 rounded-2xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {hasAiSuggestions ? '別の提案をみる' : 'AIに相談する'}
                 </button>
@@ -374,7 +403,7 @@ export default function SessionScreen({
               <button
                 type="button"
                 onClick={() => onStepChange(4)}
-                className="mt-3 w-full text-base sm:text-lg text-stone-600 hover:text-stone-800 py-2.5 sm:py-3"
+                className="mt-5 w-full text-base sm:text-lg text-stone-600 hover:text-stone-800 py-3 sm:py-3.5"
               >
                 {hasAiSuggestions ? 'このヒントをもとに直す' : '今の提案を参考にして次へ進む'}
               </button>
@@ -558,7 +587,7 @@ export default function SessionScreen({
         </div>
 
         {/* ステップごとの内容（スクロール域） */}
-        <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-4 flex-1">
+        <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-10 pt-5 sm:pt-6 flex-1">
           {renderStepContent()}
         </div>
       </div>
