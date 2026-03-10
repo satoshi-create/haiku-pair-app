@@ -514,6 +514,7 @@ export default function SessionScreen({
                     <img
                       src={sharedImageDataUrl}
                       alt=""
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -572,6 +573,7 @@ export default function SessionScreen({
                 <img
                   src={sharedImageDataUrl}
                   alt="お題の写真"
+                  loading="lazy"
                   className="w-full max-h-[50vh] object-contain rounded-lg"
                 />
               </div>

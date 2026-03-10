@@ -69,6 +69,35 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     });
   }, [list, selectedTag]);
 
+  // カード表示の段階的レンダリング（全件一括でフリーズするのを防ぐ）
+  const INITIAL_BATCH = 24;
+  const BATCH_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_BATCH);
+  }, [viewMode, selectedTag]);
+
+  useEffect(() => {
+    if (viewMode !== "card" || filteredList.length <= visibleCount) return;
+    const cb = () => {
+      setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredList.length));
+    };
+    const id =
+      typeof requestIdleCallback !== "undefined"
+        ? requestIdleCallback(cb)
+        : window.setTimeout(cb, 1);
+    return () => {
+      if (typeof cancelIdleCallback !== "undefined") {
+        cancelIdleCallback(id as number);
+      } else {
+        clearTimeout(id);
+      }
+    };
+  }, [viewMode, filteredList.length, visibleCount]);
+
+  const visibleList = viewMode === "card" ? filteredList.slice(0, visibleCount) : filteredList;
+
   if (loading) {
     return (
       <div className="space-y-6 max-h-[90vh] overflow-y-auto">
@@ -193,6 +222,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           <img
                             src={row.image_url}
                             alt=""
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </button>
@@ -234,7 +264,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                 {selectedTag ? "このタグの句はありません" : "まだ句がありません"}
               </div>
             ) : (
-              filteredList.map((row) => {
+              visibleList.map((row) => {
                 const tags = normalizeTags(row.tags);
                 return (
                   <article
@@ -253,6 +283,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           <img
                             src={row.image_url}
                             alt=""
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </button>
@@ -290,6 +321,11 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                 );
               })
             )}
+            {viewMode === "card" && visibleCount < filteredList.length && (
+              <div className="col-span-full py-4 text-center text-stone-500 text-sm">
+                読み込み中…（{visibleCount} / {filteredList.length} 件）
+              </div>
+            )}
           </div>
         )}
 
@@ -321,6 +357,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             <img
               src={expandedImageUrl}
               alt="拡大表示"
+              loading="lazy"
               className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
             />
             <button

@@ -210,7 +210,7 @@ export default function GalleryScreen({
                         className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
                         aria-label="画像を拡大"
                       >
-                        <img src={entry.image_url} alt="" className="w-full h-full object-cover" />
+                        <img src={entry.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                       </button>
                     ) : (
                       <div className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg ${getSeasonBgClass(entry.season)} flex items-center justify-center`}>
@@ -283,6 +283,7 @@ export default function GalleryScreen({
                         <img
                           src={entry.image_url}
                           alt=""
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       </button>
@@ -379,6 +380,7 @@ export default function GalleryScreen({
             <img
               src={expandedEntry.image_url!}
               alt=""
+              loading="lazy"
               className="max-w-full max-h-[60vh] w-auto object-contain rounded-lg"
             />
             <p className="text-2xl text-white font-serif text-center leading-relaxed max-w-md">
