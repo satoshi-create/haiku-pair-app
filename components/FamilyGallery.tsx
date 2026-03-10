@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  getCloudinaryUrl,
+  CLOUDINARY_THUMB_WIDTH,
+  CLOUDINARY_ZOOM_WIDTH,
+} from "@/lib/cloudinary";
+import {
   fetchFamilyHaikus,
   formatOriginDate,
   type FamilyHaikuRow,
@@ -235,7 +240,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           <img
-                            src={row.image_url}
+                            src={getCloudinaryUrl(row.image_url, CLOUDINARY_THUMB_WIDTH)}
                             alt=""
                             loading="lazy"
                             className="w-full h-full object-cover"
@@ -296,7 +301,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           <img
-                            src={row.image_url}
+                            src={getCloudinaryUrl(row.image_url, CLOUDINARY_THUMB_WIDTH)}
                             alt=""
                             loading="lazy"
                             className="w-full h-full object-cover"
@@ -370,7 +375,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={expandedImageUrl}
+              src={getCloudinaryUrl(expandedImageUrl, CLOUDINARY_ZOOM_WIDTH)}
               alt="拡大表示"
               loading="lazy"
               className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"

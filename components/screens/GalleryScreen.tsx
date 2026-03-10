@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  getCloudinaryUrl,
+  CLOUDINARY_THUMB_WIDTH,
+  CLOUDINARY_ZOOM_WIDTH,
+} from "@/lib/cloudinary";
+import {
     fetchHaikuHistory,
     getSeasonBgClass,
 } from "@/lib/haikuHistoryApi";
@@ -210,7 +215,7 @@ export default function GalleryScreen({
                         className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
                         aria-label="画像を拡大"
                       >
-                        <img src={entry.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                        <img src={getCloudinaryUrl(entry.image_url, CLOUDINARY_THUMB_WIDTH)} alt="" loading="lazy" className="w-full h-full object-cover" />
                       </button>
                     ) : (
                       <div className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg ${getSeasonBgClass(entry.season)} flex items-center justify-center`}>
@@ -281,7 +286,7 @@ export default function GalleryScreen({
                         aria-label="画像を拡大"
                       >
                         <img
-                          src={entry.image_url}
+                          src={getCloudinaryUrl(entry.image_url, CLOUDINARY_THUMB_WIDTH)}
                           alt=""
                           loading="lazy"
                           className="w-full h-full object-cover"
@@ -378,7 +383,7 @@ export default function GalleryScreen({
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={expandedEntry.image_url!}
+              src={getCloudinaryUrl(expandedEntry.image_url!, CLOUDINARY_ZOOM_WIDTH)}
               alt=""
               loading="lazy"
               className="max-w-full max-h-[60vh] w-auto object-contain rounded-lg"

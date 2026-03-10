@@ -1,4 +1,9 @@
 import FamilyGallery from '@/components/FamilyGallery';
+import {
+  getCloudinaryUrl,
+  CLOUDINARY_THUMB_WIDTH,
+  CLOUDINARY_ZOOM_WIDTH,
+} from '@/lib/cloudinary';
 import KigoDictScreen from '@/components/screens/KigoDictScreen';
 import MoraCounter from '@/components/shared/MoraCounter';
 import { useState } from 'react';
@@ -512,7 +517,7 @@ export default function SessionScreen({
                 {sharedImageDataUrl && (
                   <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-stone-200 bg-stone-100">
                     <img
-                      src={sharedImageDataUrl}
+                      src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_THUMB_WIDTH)}
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover"
@@ -571,7 +576,7 @@ export default function SessionScreen({
             {sharedImageDataUrl && (
               <div className="p-3 border-b border-stone-200">
                 <img
-                  src={sharedImageDataUrl}
+                  src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_ZOOM_WIDTH)}
                   alt="お題の写真"
                   loading="lazy"
                   className="w-full max-h-[50vh] object-contain rounded-lg"
