@@ -211,7 +211,10 @@ export default function GalleryScreen({
                     {entry.image_url ? (
                       <button
                         type="button"
-                        onClick={() => setExpandedEntry(entry)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedEntry(entry);
+                        }}
                         className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400"
                         aria-label="画像を拡大"
                       >
@@ -266,14 +269,14 @@ export default function GalleryScreen({
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full">
             {filteredList.map((entry) => {
               const seasonBg = getSeasonBgClass(entry.season);
               const tags = Array.isArray(entry.tags) ? entry.tags : [];
               return (
                 <article
                   key={String(entry.id)}
-                  className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col"
+                  className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0"
                 >
                   <div
                     className={`aspect-4/3 w-full ${entry.image_url ? "bg-stone-200" : seasonBg} flex items-center justify-center`}
@@ -281,7 +284,10 @@ export default function GalleryScreen({
                     {entry.image_url ? (
                       <button
                         type="button"
-                        onClick={() => setExpandedEntry(entry)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedEntry(entry);
+                        }}
                         className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-inset min-h-[120px]"
                         aria-label="画像を拡大"
                       >
@@ -371,7 +377,7 @@ export default function GalleryScreen({
 
       {expandedEntry && expandedEntry.image_url && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-6"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-6"
           onClick={() => setExpandedEntry(null)}
           role="button"
           tabIndex={0}
@@ -379,14 +385,14 @@ export default function GalleryScreen({
           aria-label="閉じる"
         >
           <div
-            className="max-w-full max-h-[90vh] flex flex-col items-center gap-6"
+            className="w-[95vw] max-w-[1200px] max-h-[90dvh] flex flex-col items-center gap-6"
             onClick={(e) => e.stopPropagation()}
           >
             <img
               src={getCloudinaryUrl(expandedEntry.image_url!, CLOUDINARY_ZOOM_WIDTH)}
               alt=""
               loading="lazy"
-              className="max-w-full max-h-[60vh] w-auto object-contain rounded-lg"
+              className="max-w-full max-h-[90dvh] w-auto object-contain rounded-lg"
             />
             <p className="text-2xl text-white font-serif text-center leading-relaxed max-w-md">
               {expandedEntry.haiku.replace(/　/g, " ")}

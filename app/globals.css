@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* ブラウザ共通：パディングによる幅計算ズレ防止、タップ時の青い枠を非表示 */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

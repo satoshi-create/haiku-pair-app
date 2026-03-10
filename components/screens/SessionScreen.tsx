@@ -562,7 +562,7 @@ export default function SessionScreen({
       {/* 拡大表示モーダル：写真＋ヒント全文 */}
       {showEnlargedPhoto && (sharedImageDataUrl || imageSuggestions) && (
         <div
-          className="fixed inset-0 bg-black/70 flex flex-col items-center justify-center p-4 z-40"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-40"
           onClick={() => setShowEnlargedPhoto(false)}
           role="button"
           tabIndex={0}
@@ -570,7 +570,7 @@ export default function SessionScreen({
           aria-label="閉じる"
         >
           <div
-            className="max-w-lg w-full max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-stone-200"
+            className="w-[95vw] max-w-[1200px] max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-stone-200"
             onClick={(e) => e.stopPropagation()}
           >
             {sharedImageDataUrl && (
@@ -615,14 +615,14 @@ export default function SessionScreen({
       {/* 季語辞典オーバーレイ */}
       {showKigoDict && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-40"
           onClick={() => {
             onKigoDictOpenChange?.(false);
             setShowKigoDict(false);
           }}
         >
           <div
-            className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="w-[95vw] max-w-[1200px] max-h-[90dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <KigoDictScreen
@@ -644,11 +644,11 @@ export default function SessionScreen({
       {/* 家族の句ギャラリーオーバーレイ */}
       {showFamilyGallery && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-40"
           onClick={() => setShowFamilyGallery(false)}
         >
           <div
-            className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="w-[95vw] max-w-[1200px] max-h-[90dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <FamilyGallery onClose={() => setShowFamilyGallery(false)} />

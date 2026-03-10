@@ -106,7 +106,13 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   }, [viewMode, selectedTag]);
 
   useEffect(() => {
-    if (viewMode !== "card" || filteredList.length <= visibleCount) return;
+    // モーダル表示中はバッチ追加を止め、選択イベントがデータ更新を誘発しないようガード
+    if (
+      viewMode !== "card" ||
+      filteredList.length <= visibleCount ||
+      expandedImageUrl != null
+    )
+      return;
     const id = window.setTimeout(
       () => {
         setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredList.length));
@@ -114,13 +120,13 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       BATCH_DELAY_MS,
     );
     return () => clearTimeout(id);
-  }, [viewMode, filteredList.length, visibleCount]);
+  }, [viewMode, filteredList.length, visibleCount, expandedImageUrl]);
 
   const visibleList = viewMode === "card" ? filteredList.slice(0, visibleCount) : filteredList;
 
   if (loading) {
     return (
-      <div className="space-y-6 max-h-[90vh] overflow-y-auto">
+      <div className="space-y-6 max-h-[90dvh] overflow-y-auto">
         <div className="bg-white/80 backdrop-blur rounded-2xl p-8 shadow-lg border border-stone-200">
           <div className="flex items-center justify-between gap-4 mb-6">
             <h2 className="text-2xl font-bold text-stone-800">家族の思い出</h2>
@@ -140,7 +146,9 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   }
 
   return (
-    <div className="space-y-6 max-h-[90vh] overflow-y-auto">
+    <div
+      className={`space-y-6 max-h-[90dvh] overflow-y-auto ${expandedImageUrl ? "overflow-hidden" : ""}`}
+    >
       <div className="bg-white/80 backdrop-blur rounded-2xl p-6 shadow-lg border border-stone-200">
         <div className="flex items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold text-stone-800">家族の思い出</h2>
@@ -235,7 +243,10 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                       {row.image_url ? (
                         <button
                           type="button"
-                          onClick={() => setExpandedImageUrl(row.image_url)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedImageUrl(row.image_url);
+                          }}
                           className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 rounded-lg"
                           aria-label="画像を拡大"
                         >
@@ -278,7 +289,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             )}
           </ul>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-2 sm:px-4 w-full max-w-full">
             {filteredList.length === 0 ? (
               <div className="col-span-full text-xl text-stone-500 py-12 text-center">
                 {selectedTag ? "このタグの句はありません" : "まだ句がありません"}
@@ -289,14 +300,17 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                 return (
                   <article
                     key={row.id}
-                    className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col"
+                    className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0"
                   >
                     {/* 上部: 写真（正方形・object-cover） */}
                     <div className="aspect-square w-full bg-stone-200">
                       {row.image_url ? (
                         <button
                           type="button"
-                          onClick={() => setExpandedImageUrl(row.image_url)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedImageUrl(row.image_url);
+                          }}
                           className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-inset"
                           aria-label="画像を拡大"
                         >
@@ -363,7 +377,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       {/* 画像拡大モーダル（モーダル内モーダル） */}
       {expandedImageUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setExpandedImageUrl(null)}
           role="button"
           tabIndex={0}
@@ -371,14 +385,14 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           aria-label="閉じる"
         >
           <div
-            className="relative max-w-full max-h-[90vh] flex items-center justify-center"
+            className="relative w-[95vw] max-w-[1200px] max-h-[90dvh] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
             <img
               src={getCloudinaryUrl(expandedImageUrl, CLOUDINARY_ZOOM_WIDTH)}
               alt="拡大表示"
               loading="lazy"
-              className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+              className="max-w-full max-h-[90dvh] w-auto h-auto object-contain rounded-lg"
             />
             <button
               type="button"
