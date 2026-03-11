@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCloudinaryUrl,
@@ -29,6 +30,10 @@ function normalizeTags(tags: unknown): string[] {
   return [];
 }
 
+const INITIAL_BATCH = 4;
+const BATCH_SIZE = 4;
+const BATCH_DELAY_MS = 200;
+
 export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const [loading, setLoading] = useState(true);
   const [list, setList] = useState<FamilyHaikuRow[]>([]);
@@ -38,6 +43,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   /** ゴーストクリック対策：切り替え直後のクールダウン（ms） */
   const [switchCooldown, setSwitchCooldown] = useState(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
+  const lastBatchLoadedRef = useRef(false);
 
   const handleViewModeChange = useCallback(
     (mode: "list" | "card") => {
@@ -48,6 +55,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       }
       setSwitchCooldown(true);
       setViewMode(mode);
+      setVisibleCount(INITIAL_BATCH);
+      lastBatchLoadedRef.current = false;
       cooldownTimerRef.current = setTimeout(() => {
         setSwitchCooldown(false);
         cooldownTimerRef.current = null;
@@ -55,6 +64,12 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     },
     [viewMode],
   );
+
+  const handleSelectedTagChange = useCallback((tag: string | null) => {
+    setSelectedTag(tag);
+    setVisibleCount(INITIAL_BATCH);
+    lastBatchLoadedRef.current = false;
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -64,7 +79,6 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetchFamilyHaikus()
       .then((data) => {
         if (!cancelled) setList(data);
@@ -93,18 +107,6 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       return tags.some((t) => t.trim() === selectedTag);
     });
   }, [list, selectedTag]);
-
-  // カード表示の段階的レンダリング（低スペック端末でのフリーズを防ぐ）
-  const INITIAL_BATCH = 4;
-  const BATCH_SIZE = 4;
-  const BATCH_DELAY_MS = 200;
-  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
-  const lastBatchLoadedRef = useRef(false);
-
-  useEffect(() => {
-    setVisibleCount(INITIAL_BATCH);
-    lastBatchLoadedRef.current = false;
-  }, [viewMode, selectedTag]);
 
   const scheduleNextBatch = useCallback(() => {
     if (
@@ -223,7 +225,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 scrollbar-thin">
               <button
                 type="button"
-                onClick={() => setSelectedTag(null)}
+                onClick={() => handleSelectedTagChange(null)}
                 className={`shrink-0 min-h-[44px] px-4 rounded-xl text-lg font-semibold transition-colors ${
                   selectedTag === null
                     ? "bg-stone-800 text-white"
@@ -236,7 +238,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                 <button
                   key={tag}
                   type="button"
-                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                  onClick={() => handleSelectedTagChange(selectedTag === tag ? null : tag)}
                   className={`shrink-0 min-h-[44px] px-4 rounded-xl text-lg font-semibold transition-colors ${
                     selectedTag === tag
                       ? "bg-amber-500 text-white"
@@ -265,7 +267,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                     key={row.id}
                     className="flex gap-4 p-4 rounded-xl border border-stone-200 bg-stone-50/80"
                   >
-                    <div className="shrink-0 w-24 h-24 min-w-[96px] min-h-[96px] rounded-lg overflow-hidden bg-stone-200">
+                    <div className="shrink-0 w-24 h-24 min-w-[96px] min-h-[96px] rounded-lg overflow-hidden bg-stone-200 relative">
                       {row.image_url ? (
                         <button
                           type="button"
@@ -273,15 +275,31 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                             e.stopPropagation();
                             setExpandedImageUrl(row.image_url);
                           }}
-                          className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 rounded-lg"
+                          className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 rounded-lg relative"
                           aria-label="画像を拡大"
                         >
-                          <img
-                            src={getCloudinaryUrl(row.image_url, 400, "gallery")}
-                            alt=""
-                            loading="lazy"
-                            className="w-full h-full object-cover"
-                          />
+                          {(() => {
+                            const imgSrc = getCloudinaryUrl(row.image_url, 400, "gallery");
+                            if (imgSrc.startsWith("data:")) {
+                              return (
+                                <img
+                                  src={imgSrc}
+                                  alt=""
+                                  loading="lazy"
+                                  className="w-full h-full object-cover"
+                                />
+                              );
+                            }
+                            return (
+                              <Image
+                                src={imgSrc}
+                                alt=""
+                                fill
+                                sizes="96px"
+                                className="object-cover"
+                              />
+                            );
+                          })()}
                         </button>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-stone-400 text-2xl">
@@ -331,7 +349,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                     className="bg-white rounded-2xl border border-stone-200 shadow-md overflow-hidden flex flex-col min-w-0 [content-visibility:auto]"
                   >
                     {/* 上部: 写真（正方形・object-cover） */}
-                    <div className="aspect-square w-full bg-stone-200">
+                    <div className="aspect-square w-full bg-stone-200 relative">
                       {row.image_url ? (
                         <button
                           type="button"
@@ -339,16 +357,34 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                             e.stopPropagation();
                             setExpandedImageUrl(row.image_url);
                           }}
-                          className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-inset"
+                          className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-inset relative"
                           aria-label="画像を拡大"
                         >
-                          <img
-                            src={getCloudinaryUrl(row.image_url, 400, "gallery")}
-                            alt=""
-                            loading="lazy"
-                            onLoad={shouldTriggerOnLoad ? handleLastCardImageLoad : undefined}
-                            className="w-full h-full object-cover transition-opacity duration-300"
-                          />
+                          {(() => {
+                            const imgSrc = getCloudinaryUrl(row.image_url, 400, "gallery");
+                            if (imgSrc.startsWith("data:")) {
+                              return (
+                                // eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応
+                                <img
+                                  src={imgSrc}
+                                  alt=""
+                                  loading="lazy"
+                                  onLoad={shouldTriggerOnLoad ? handleLastCardImageLoad : undefined}
+                                  className="w-full h-full object-cover transition-opacity duration-300"
+                                />
+                              );
+                            }
+                            return (
+                              <Image
+                                src={imgSrc}
+                                alt=""
+                                fill
+                                sizes="(max-width: 640px) 100vw, 50vw"
+                                onLoad={shouldTriggerOnLoad ? handleLastCardImageLoad : undefined}
+                                className="object-cover transition-opacity duration-300"
+                              />
+                            );
+                          })()}
                         </button>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-stone-400 text-5xl">
@@ -414,15 +450,34 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           aria-label="閉じる"
         >
           <div
-            className="relative w-[95vw] max-w-[1200px] max-h-[90dvh] flex items-center justify-center"
+            className="relative w-[95vw] max-w-[1200px] max-h-[90dvh] flex flex-col items-center justify-center gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={getCloudinaryUrl(expandedImageUrl, CLOUDINARY_ZOOM_WIDTH)}
-              alt="拡大表示"
-              loading="lazy"
-              className="max-w-full max-h-[90dvh] w-auto h-auto object-contain rounded-lg"
-            />
+            {(() => {
+              const imgSrc = getCloudinaryUrl(expandedImageUrl, CLOUDINARY_ZOOM_WIDTH);
+              if (imgSrc.startsWith("data:")) {
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応
+                  <img
+                    src={imgSrc}
+                    alt="拡大表示"
+                    loading="lazy"
+                    className="max-w-full max-h-[90dvh] w-auto h-auto object-contain rounded-lg"
+                  />
+                );
+              }
+              return (
+                <div className="relative w-full max-w-[1200px] h-[80dvh] min-h-[200px] max-h-[90dvh]">
+                  <Image
+                    src={imgSrc}
+                    alt="拡大表示"
+                    fill
+                    sizes="95vw"
+                    className="object-contain rounded-lg"
+                  />
+                </div>
+              );
+            })()}
             <button
               type="button"
               onClick={() => setExpandedImageUrl(null)}
