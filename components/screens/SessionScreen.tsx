@@ -309,16 +309,20 @@ export default function SessionScreen({
             {/* 手書きキャンバス（フルスクリーン） */}
             {showHandwritingCanvas && (
               <HandwritingCanvas
+                kigo={kigo ?? ''}
                 onClose={() => setShowHandwritingCanvas(false)}
                 onComplete={async (dataUrl) => {
                   setShowHandwritingCanvas(false);
                   await onHandwritingComplete?.(dataUrl);
                 }}
                 nudgeHints={[
-                  'お父さん、今の季節の言葉を書いてみようか',
+                  kigo?.trim()
+                    ? `お父さん、『${kigo}』の俳句を書いてみようか`
+                    : 'お父さん、今の季節の言葉を書いてみようか',
                   'ゆっくり、指でなぞってみてね',
                   '思いついた言葉を、そのまま書いてみましょう',
                 ]}
+                showGuideLines
               />
             )}
 
