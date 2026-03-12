@@ -1,7 +1,7 @@
 import type { ImageSuggestions } from '@/lib/types';
 
 // --- Task names ---
-export type AITaskName = 'haiku' | 'kigo' | 'haiga' | 'analysis';
+export type AITaskName = 'haiku' | 'kigo' | 'haiga' | 'analysis' | 'handwriting';
 
 // --- Per-task payload types ---
 export interface HaikuPayload {
@@ -18,6 +18,11 @@ export interface AnalysisPayload {
   image: { data: string; mediaType: string };
 }
 
+/** 手書き文字認識（デジタル半紙の画像 → 俳句テキスト） */
+export interface HandwritingPayload {
+  image: { data: string; mediaType: string };
+}
+
 export interface KigoPayload {
   theme: string;
   season?: string;
@@ -27,6 +32,7 @@ export type AITaskPayload =
   | { task: 'haiku'; payload: HaikuPayload }
   | { task: 'haiga'; payload: HaigaPayload }
   | { task: 'analysis'; payload: AnalysisPayload }
+  | { task: 'handwriting'; payload: HandwritingPayload }
   | { task: 'kigo'; payload: KigoPayload };
 
 // --- Per-task response types ---
@@ -39,6 +45,11 @@ export interface HaigaResponse {
 }
 
 export type AnalysisResponse = ImageSuggestions;
+
+/** 手書き認識結果（俳句テキスト） */
+export interface HandwritingResponse {
+  text: string;
+}
 
 export interface KigoResponse {
   season: string;

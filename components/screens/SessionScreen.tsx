@@ -1,4 +1,5 @@
 import FamilyGallery from '@/components/FamilyGallery';
+import HandwritingCanvas from '@/components/HandwritingCanvas';
 import {
   getCloudinaryUrl,
   CLOUDINARY_THUMB_WIDTH,
@@ -76,6 +77,10 @@ interface SessionScreenProps {
   coolDownSecondsRemaining?: number;
   /** AI相談の残り回数（0で制限到達） */
   aiSuggestionRemaining?: number;
+  /** 手書き完了時コールバック（画像 data URL → OCR 後に myHaiku 設定・Step 3 へ） */
+  onHandwritingComplete?: (dataUrl: string) => Promise<void>;
+  /** 手書き OCR 読み取り中（ローディング表示用） */
+  isHandwritingOcrLoading?: boolean;
 }
 
 export default function SessionScreen({
@@ -126,10 +131,14 @@ export default function SessionScreen({
   isCoolingDown = false,
   coolDownSecondsRemaining = 0,
   aiSuggestionRemaining,
+  onHandwritingComplete,
+  isHandwritingOcrLoading = false,
 }: SessionScreenProps) {
   const [showKigoDict, setShowKigoDict] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
   const [showEnlargedPhoto, setShowEnlargedPhoto] = useState(false);
+  /** Step 2: デジタル半紙（手書きエリア）を表示するか */
+  const [showHandwritingCanvas, setShowHandwritingCanvas] = useState(false);
   /** Step 3: AI提案アコーディオンの開閉（デフォルトは閉じた状態） */
   const [aiSuggestionsOpen, setAiSuggestionsOpen] = useState(false);
 
@@ -296,37 +305,75 @@ export default function SessionScreen({
 
       case 2:
         return (
-          <div className="space-y-4 sm:space-y-5">
-            <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
-              <p className="text-base sm:text-lg text-stone-800 font-semibold mb-2 sm:mb-3">あなたの句</p>
-              <p className="text-sm text-stone-400 mb-2" aria-hidden>
-                （ご家族の句より：{SAMPLE_FAMILY_HAIKU.replace(/　/g, ' ')}）
-              </p>
-              <textarea
-                value={myHaiku}
-                onChange={(e) => {
-                  onMyHaikuChange(e.target.value);
-                  onSetSubmitted(false);
+          <>
+            {/* 手書きキャンバス（フルスクリーン） */}
+            {showHandwritingCanvas && (
+              <HandwritingCanvas
+                onClose={() => setShowHandwritingCanvas(false)}
+                onComplete={async (dataUrl) => {
+                  setShowHandwritingCanvas(false);
+                  await onHandwritingComplete?.(dataUrl);
                 }}
-                placeholder={'思いついた言葉から、気楽に書きはじめてみましょう。'}
-                className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500 scroll-mt-24"
+                nudgeHints={[
+                  'お父さん、今の季節の言葉を書いてみようか',
+                  'ゆっくり、指でなぞってみてね',
+                  '思いついた言葉を、そのまま書いてみましょう',
+                ]}
               />
-              {myHaiku && (
-                <div className="mt-3">
-                  <MoraCounter text={myHaiku} />
-                </div>
-              )}
-            </div>
+            )}
 
-            <button
-              type="button"
-              disabled={!myHaiku.trim()}
-              onClick={() => onStepChange(3)}
-              className="w-full bg-stone-800 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              AIに相談する前へ
-            </button>
-          </div>
+            {/* OCR 読み取り中オーバーレイ */}
+            {isHandwritingOcrLoading && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/90">
+                <p className="text-xl sm:text-2xl text-stone-600 animate-pulse">
+                  手書きを読み取っています…
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4 sm:space-y-5">
+              <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
+                <p className="text-base sm:text-lg text-stone-800 font-semibold mb-2 sm:mb-3">あなたの句</p>
+                <p className="text-sm text-stone-400 mb-2" aria-hidden>
+                  （ご家族の句より：{SAMPLE_FAMILY_HAIKU.replace(/　/g, ' ')}）
+                </p>
+                <textarea
+                  value={myHaiku}
+                  onChange={(e) => {
+                    onMyHaikuChange(e.target.value);
+                    onSetSubmitted(false);
+                  }}
+                  placeholder={'思いついた言葉から、気楽に書きはじめてみましょう。'}
+                  className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500 scroll-mt-24"
+                />
+                {myHaiku && (
+                  <div className="mt-3">
+                    <MoraCounter text={myHaiku} />
+                  </div>
+                )}
+
+                {/* 手書きモード切り替えボタン */}
+                <div className="mt-4 pt-4 border-t border-stone-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowHandwritingCanvas(true)}
+                    className="w-full py-3 rounded-xl border-2 border-stone-400 text-stone-700 text-lg font-semibold hover:bg-stone-50 hover:border-stone-600 transition-colors touch-manipulation"
+                  >
+                    ✍️ 指で書く（デジタル半紙）
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={!myHaiku.trim()}
+                onClick={() => onStepChange(3)}
+                className="w-full bg-stone-800 text-white text-lg sm:text-xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                AIに相談する前へ
+              </button>
+            </div>
+          </>
         );
 
       case 3:

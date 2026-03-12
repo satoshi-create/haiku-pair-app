@@ -87,6 +87,35 @@ ${idea}
     };
   },
 
+  handwriting: (payload) => {
+    const { image } = payload as {
+      image: { data: string; mediaType: string };
+    };
+    return {
+      systemPrompt:
+        'あなたは手書き日本語の読み取りに熟練しています。画像に手書きで書かれた俳句（短歌形式の5・7・5など）を、正確にテキストに変換してください。',
+      userContent: [
+        {
+          type: 'text',
+          text: `この画像に手書きで書かれた俳句（日本語）を読み取って、そのままテキストで出力してください。
+- 改行はそのまま維持
+- 句読点・スペースも正確に
+- 読み取れない文字は「？」で代替
+- 俳句以外の余分な記述は含めない`,
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${image.mediaType};base64,${image.data}`,
+          },
+        },
+      ],
+      maxTokens: 200,
+      temperature: 0.1,
+      responseMode: 'text',
+    };
+  },
+
   kigo: (payload) => {
     const { theme, season } = payload as { theme: string; season?: string };
     const seasonConstraint = season
@@ -221,6 +250,9 @@ export async function POST(request: NextRequest) {
     // Text mode: wrap in task-specific response shape
     if (task === 'haiga') {
       return NextResponse.json({ description: rawText });
+    }
+    if (task === 'handwriting') {
+      return NextResponse.json({ text: rawText.trim() });
     }
 
     return NextResponse.json({ text: rawText });

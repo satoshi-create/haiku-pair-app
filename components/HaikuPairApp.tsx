@@ -4,6 +4,7 @@ import {
     analyzeImage,
     generateHaiga as generateHaigaAI,
     generateHaikuSuggestions,
+    recognizeHandwriting,
 } from "@/lib/ai";
 import {
     ensureMyUserUuid,
@@ -508,6 +509,7 @@ export default function HaikuPairApp() {
   const [showAISuggest, setShowAISuggest] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const [isHandwritingOcrLoading, setIsHandwritingOcrLoading] = useState(false);
   const [userIdea, setUserIdea] = useState("");
   const [aiSuggestionRemaining, setAiSuggestionRemaining] = useState<number | undefined>(undefined);
 
@@ -556,6 +558,23 @@ export default function HaikuPairApp() {
       ]);
     } finally {
       setIsGeneratingSuggestions(false);
+    }
+  };
+
+  // --- 手書き認識（デジタル半紙 → OCR → myHaiku 設定・Step 3 へ） ---
+  const handleHandwritingComplete = async (dataUrl: string) => {
+    setIsHandwritingOcrLoading(true);
+    try {
+      const text = await recognizeHandwriting(dataUrl);
+      setMyHaiku(text);
+      setActiveStep(3);
+    } catch (error) {
+      console.error("Handwriting OCR error:", error);
+      alert(
+        "手書きの読み取りに失敗しました。もう一度書いてみるか、キーボードで入力してください。"
+      );
+    } finally {
+      setIsHandwritingOcrLoading(false);
     }
   };
 
@@ -1138,6 +1157,8 @@ export default function HaikuPairApp() {
             isSubmittingHaiku={isSubmittingHaiku}
             isCoolingDown={isCoolingDown}
             coolDownSecondsRemaining={coolDownSecondsRemaining}
+            onHandwritingComplete={handleHandwritingComplete}
+            isHandwritingOcrLoading={isHandwritingOcrLoading}
           />
         );
       case "gallery":
