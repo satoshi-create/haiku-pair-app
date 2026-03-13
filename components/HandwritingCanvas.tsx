@@ -126,24 +126,23 @@ export default function HandwritingCanvas({
         paddingBottom: "max(5.5rem, calc(88px + env(safe-area-inset-bottom)))",
       }}
     >
-      {/* 1. ヘッダー（季語・ナッジ・戻る）w-full・余白最小で端まで */}
-      <header className="shrink-0 flex flex-col gap-2 w-full px-2 py-3 sm:py-4 bg-amber-50/95 border-b border-amber-200/80">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1 rounded-lg bg-stone-100/95 px-2 py-1.5 text-xs text-stone-600 shadow-sm">
-            💡 {currentHint}
-          </div>
-          {onClose && (
+      {/* 1. ヘッダー（お題ボード）1.戻る 2.季語 3.ナッジ */}
+      <header className="shrink-0 flex flex-col w-full bg-amber-50/95 border-b border-amber-200/80">
+        {/* 最上部：戻るボタンのみ右寄せ */}
+        {onClose && (
+          <div className="flex justify-end px-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 min-h-[40px] min-w-[40px] px-2 py-1.5 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
+              className="min-h-[40px] min-w-[40px] px-2 py-1.5 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
               aria-label="キーボード入力に戻る"
             >
               戻る
             </button>
-          )}
-        </div>
-        <p className="text-2xl sm:text-3xl font-bold text-stone-800 text-center">
+          </div>
+        )}
+        {/* 中央：季語 */}
+        <p className="text-2xl sm:text-3xl font-bold text-stone-800 text-center px-4 py-2">
           {kigo?.trim() ? (
             <>
               季語：<span className="text-amber-800">{kigo}</span>
@@ -152,6 +151,12 @@ export default function HandwritingCanvas({
             "季語を決めてから書いてね"
           )}
         </p>
+        {/* 季語の下：ナッジ（アニメーション付き） */}
+        <div className="px-4 pb-3 pt-0">
+          <p className="nudge-appear nudge-breathe text-sm text-stone-600 text-center">
+            💡 {currentHint}
+          </p>
+        </div>
       </header>
 
       {/* 2. キャンバス（残り高さをすべて使用、横幅いっぱい） */}

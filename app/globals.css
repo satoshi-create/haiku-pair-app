@@ -74,6 +74,26 @@ textarea::placeholder {
   50% { opacity: 0.6; }
 }
 
+/* ナッジ（声掛けヒント）用：優しく浮き出る＋3秒ごとにポワンと揺れる */
+@keyframes nudgeFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes nudgeBreathe {
+  0%, 90%, 100% { transform: translateY(0) scale(1); }
+  93% { transform: translateY(-2px) scale(1.01); }
+  96% { transform: translateY(0) scale(1); }
+}
+
+.nudge-appear {
+  animation: nudgeFadeIn 0.8s ease-out forwards;
+}
+.nudge-breathe {
+  animation: nudgeBreathe 3s ease-in-out infinite;
+  animation-delay: 0.8s;
+  animation-fill-mode: both;
+}
+
 .fade-in {
   animation: fadeIn 0.5s ease-out;
 }
