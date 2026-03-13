@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SignatureCanvas from "react-signature-canvas";
+import { getCloudinaryUrl, CLOUDINARY_THUMB_WIDTH } from "@/lib/cloudinary";
 
 /** URL に ?handwritingDebug=1 があるとデバッグ表示を有効にする */
 const DEBUG_PARAM = "handwritingDebug";
@@ -26,6 +27,10 @@ interface HandwritingCanvasProps {
   hintBanner?: HintBannerData | null;
   /** AIからの提案（Step 3 で相談した結果）。ヒントバナーに表示 */
   aiSuggestions?: string[];
+  /** 共有写真（data URL）。サムネイル表示＆タップで拡大 */
+  sharedImageDataUrl?: string | null;
+  /** サムネイルタップ時に拡大表示をリクエスト */
+  onRequestEnlargedPhoto?: () => void;
 }
 
 /**
@@ -40,6 +45,8 @@ export default function HandwritingCanvas({
   nudgeHints,
   hintBanner = null,
   aiSuggestions = [],
+  sharedImageDataUrl = null,
+  onRequestEnlargedPhoto,
 }: HandwritingCanvasProps) {
   const searchParams = useSearchParams();
   const debug = searchParams.get(DEBUG_PARAM) === "1";
@@ -143,17 +150,36 @@ export default function HandwritingCanvas({
         {/* 最上部：作句のヒントバナー（写真解析 or AI提案）+ 戻る */}
         {(hintBanner || aiSuggestions.length > 0) && (
           <div className="flex items-start justify-between gap-2 px-2 pt-2 pb-1">
-            <div className="min-w-0 flex-1 rounded-lg border border-amber-200/80 bg-amber-50/90 px-2 py-1.5">
-              <p className="text-xs font-semibold text-amber-800 mb-0.5">作句のヒント</p>
-              {hintBanner?.sceneDescription && (
-                <p className="text-xs text-stone-700 line-clamp-2 leading-snug">{hintBanner.sceneDescription}</p>
+            <div
+              className={`min-w-0 flex-1 rounded-lg border border-amber-200/80 bg-amber-50/90 px-2 py-1.5 flex items-start gap-2 ${
+                sharedImageDataUrl && onRequestEnlargedPhoto ? "cursor-pointer hover:bg-amber-100/80 active:bg-amber-200/60 touch-manipulation" : ""
+              }`}
+              onClick={sharedImageDataUrl && onRequestEnlargedPhoto ? () => onRequestEnlargedPhoto?.() : undefined}
+              role={sharedImageDataUrl && onRequestEnlargedPhoto ? "button" : undefined}
+            >
+              {sharedImageDataUrl && (
+                <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200/80">
+                  <img
+                    src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_THUMB_WIDTH)}
+                    alt="散歩の写真"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               )}
-              {hintBanner?.haikuHints?.[0] && (
-                <p className="text-xs text-stone-600 mt-0.5">💡 {hintBanner.haikuHints[0]}</p>
-              )}
-              {aiSuggestions[0] && !hintBanner?.sceneDescription && (
-                <p className="text-xs text-stone-700 line-clamp-2">{aiSuggestions[0]}</p>
-              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-amber-800 mb-0.5">
+                  {sharedImageDataUrl && onRequestEnlargedPhoto ? "📸 作句のヒント（タップで拡大）" : "作句のヒント"}
+                </p>
+                {hintBanner?.sceneDescription && (
+                  <p className="text-xs text-stone-700 line-clamp-2 leading-snug">{hintBanner.sceneDescription}</p>
+                )}
+                {hintBanner?.haikuHints?.[0] && (
+                  <p className="text-xs text-stone-600 mt-0.5">💡 {hintBanner.haikuHints[0]}</p>
+                )}
+                {aiSuggestions[0] && !hintBanner?.sceneDescription && (
+                  <p className="text-xs text-stone-700 line-clamp-2">{aiSuggestions[0]}</p>
+                )}
+              </div>
             </div>
             {onClose && (
               <button

@@ -334,6 +334,8 @@ export default function SessionScreen({
                       : null
                   }
                   aiSuggestions={aiSuggestions}
+                  sharedImageDataUrl={sharedImageDataUrl}
+                  onRequestEnlargedPhoto={() => setShowEnlargedPhoto(true)}
                 />,
                 document.body
               )}
