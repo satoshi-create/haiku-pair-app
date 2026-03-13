@@ -322,7 +322,6 @@ export default function SessionScreen({
                   'ゆっくり、指でなぞってみてね',
                   '思いついた言葉を、そのまま書いてみましょう',
                 ]}
-                showGuideLines
               />
             )}
 

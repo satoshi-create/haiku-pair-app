@@ -12,13 +12,11 @@ interface HandwritingCanvasProps {
   onClose?: () => void;
   /** 補助者向けナッジ表示テキスト（複数、順にローテーション可）。季語を含む場合は {kigo} で埋め込み */
   nudgeHints?: string[];
-  /** 575 ガイドライン（横2本で3行）を表示するか */
-  showGuideLines?: boolean;
 }
 
 /**
  * デジタル半紙（手書きエリア）。
- * 指書き・リハビリ支援向けに最適化。横書き3行（5・7・5）レイアウト。
+ * 指書き・リハビリ支援向けに最適化。縦長タブレット向けの縦長ビューポート。
  */
 export default function HandwritingCanvas({
   kigo = "",
@@ -26,7 +24,6 @@ export default function HandwritingCanvas({
   onComplete,
   onClose,
   nudgeHints,
-  showGuideLines = true,
 }: HandwritingCanvasProps) {
   const sigRef = useRef<SignatureCanvas>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,18 +35,23 @@ export default function HandwritingCanvas({
     if (!el) return;
 
     const updateSize = () => {
-      const { width, height } = el.getBoundingClientRect();
-      const w = Math.round(width);
-      const h = Math.round(height);
-      if (w > 0 && h > 0) {
-        setCanvasSize({ width: w, height: h });
-      }
+      requestAnimationFrame(() => {
+        const { width, height } = el.getBoundingClientRect();
+        const w = Math.round(width);
+        const h = Math.round(height);
+        if (w > 0 && h > 0) {
+          setCanvasSize({ width: w, height: h });
+        }
+      });
     };
 
-    updateSize();
+    const timeoutId = setTimeout(updateSize, 50);
     const ro = new ResizeObserver(updateSize);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      clearTimeout(timeoutId);
+      ro.disconnect();
+    };
   }, []);
 
   const resolvedHints = useMemo(() => {
@@ -80,8 +82,13 @@ export default function HandwritingCanvas({
 
   return (
     <div
-      className="fixed inset-0 z-30 h-dvh flex flex-col overflow-hidden bg-white"
-      style={{ touchAction: "none" }}
+      className="fixed inset-0 z-30 flex flex-col overflow-hidden bg-white"
+      style={{
+        touchAction: "none",
+        height: "100svh",
+        maxHeight: "100svh",
+        paddingBottom: "max(5.5rem, calc(88px + env(safe-area-inset-bottom)))",
+      }}
     >
       {/* 1. ヘッダー（季語・ナッジ）h-auto */}
       <header className="shrink-0 h-auto px-4 py-2 sm:py-3 bg-amber-50/95 border-b border-amber-200/80 relative">
@@ -109,10 +116,13 @@ export default function HandwritingCanvas({
         )}
       </header>
 
-      {/* 2. 中央（キャンバス）flex-1 */}
-      <div ref={containerRef} className="flex-1 min-h-0 min-w-0 relative bg-white overflow-hidden">
-        {canvasSize.width > 0 && canvasSize.height > 0 && (
-          <>
+      {/* 2. キャンバス（縦長 3:4、flex-1 で残り余白を使用） */}
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden bg-white">
+        <div
+          ref={containerRef}
+          className="relative h-full aspect-3/4 w-auto max-w-full bg-stone-50 border-x border-stone-200"
+        >
+          {canvasSize.width > 0 && canvasSize.height > 0 && (
             <SignatureCanvas
               ref={sigRef}
               canvasProps={{
@@ -129,25 +139,15 @@ export default function HandwritingCanvas({
               backgroundColor="rgb(255, 255, 255)"
               clearOnResize={false}
             />
-            {/* 575 ガイドライン（横2本 → 3行・横書き用） */}
-            {showGuideLines && (
-              <div
-                className="absolute inset-0 pointer-events-none flex flex-col"
-                aria-hidden
-              >
-                <div className="flex-1 min-h-0" />
-                <div className="h-px shrink-0 bg-stone-300/50" />
-                <div className="flex-1 min-h-0" />
-                <div className="h-px shrink-0 bg-stone-300/50" />
-                <div className="flex-1 min-h-0" />
-              </div>
-            )}
-          </>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* 3. フッター（ボタンエリア）h-24 固定 */}
-      <footer className="shrink-0 h-24 flex items-center justify-between gap-4 px-4 sm:px-6 bg-white border-t border-stone-200 safe-area-pb">
+      {/* 3. フッター（ボタン）ビューポート下部に固定、タブレットでも常に表示 */}
+      <footer
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-white border-t border-stone-200 min-h-[88px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      >
         <button
           type="button"
           onClick={handleClear}
