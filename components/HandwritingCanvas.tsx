@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
 interface HandwritingCanvasProps {
@@ -12,13 +12,13 @@ interface HandwritingCanvasProps {
   onClose?: () => void;
   /** 補助者向けナッジ表示テキスト（複数、順にローテーション可）。季語を含む場合は {kigo} で埋め込み */
   nudgeHints?: string[];
-  /** 575 ガイドライン（縦2本で3ゾーン）を表示するか */
+  /** 575 ガイドライン（横2本で3行）を表示するか */
   showGuideLines?: boolean;
 }
 
 /**
  * デジタル半紙（手書きエリア）。
- * 指書き・リハビリ支援向けに最適化したキャンバス。
+ * 指書き・リハビリ支援向けに最適化。横書き3行（5・7・5）レイアウト。
  */
 export default function HandwritingCanvas({
   kigo = "",
@@ -29,7 +29,28 @@ export default function HandwritingCanvas({
   showGuideLines = true,
 }: HandwritingCanvasProps) {
   const sigRef = useRef<SignatureCanvas>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hintIndex, setHintIndex] = useState(0);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateSize = () => {
+      const { width, height } = el.getBoundingClientRect();
+      const w = Math.round(width);
+      const h = Math.round(height);
+      if (w > 0 && h > 0) {
+        setCanvasSize({ width: w, height: h });
+      }
+    };
+
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const resolvedHints = useMemo(() => {
     if (nudgeHints && nudgeHints.length > 0) return nudgeHints;
@@ -59,11 +80,11 @@ export default function HandwritingCanvas({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex flex-col bg-white"
+      className="fixed inset-0 z-30 h-dvh flex flex-col overflow-hidden bg-white"
       style={{ touchAction: "none" }}
     >
-      {/* 季語カンペ（最上部・常に見える） */}
-      <div className="shrink-0 w-full px-4 py-3 sm:py-4 bg-amber-50/95 border-b border-amber-200/80">
+      {/* 1. ヘッダー（季語・ナッジ）h-auto */}
+      <header className="shrink-0 h-auto px-4 py-2 sm:py-3 bg-amber-50/95 border-b border-amber-200/80 relative">
         <p className="text-3xl sm:text-4xl font-bold text-stone-800 text-center">
           {kigo?.trim() ? (
             <>
@@ -73,72 +94,75 @@ export default function HandwritingCanvas({
             "季語を決めてから書いてね"
           )}
         </p>
-      </div>
-
-      {/* 補助者向けナッジ（左上）＆ 戻る（右上） */}
-      <div className="absolute top-16 sm:top-20 left-2 z-20 max-w-[70%] sm:max-w-md rounded-lg bg-stone-100/95 px-3 py-2 text-xs sm:text-sm text-stone-600 shadow-sm">
-        💡 {currentHint}
-      </div>
-      {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-16 sm:top-20 right-2 z-20 min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
-          aria-label="キーボード入力に戻る"
-        >
-          戻る
-        </button>
-      )}
-
-      {/* 筆記エリア（横幅100%・高さ60〜70dvh・575が収まる縦長） */}
-      <div className="w-full flex-1 min-h-[60dvh] min-w-0 relative bg-white border-b border-stone-200">
-        <div className="absolute inset-0">
-          <SignatureCanvas
-            ref={sigRef}
-            canvasProps={{
-              className: "w-full h-full touch-none block",
-              style: { touchAction: "none" },
-            }}
-            minWidth={4}
-            maxWidth={9}
-            penColor="black"
-            velocityFilterWeight={0.7}
-            throttle={16}
-            backgroundColor="rgb(255, 255, 255)"
-          />
-          {/* 575 ガイドライン（うっすら縦2本 → 3ゾーン） */}
-          {showGuideLines && (
-            <div
-              className="absolute inset-0 pointer-events-none flex"
-              aria-hidden
-            >
-              <div className="flex-1" />
-              <div className="w-px bg-stone-300/50 shrink-0" />
-              <div className="flex-1" />
-              <div className="w-px bg-stone-300/50 shrink-0" />
-              <div className="flex-1" />
-            </div>
-          )}
+        <div className="absolute top-2 left-2 max-w-[55%] sm:max-w-[60%] rounded-lg bg-stone-100/95 px-2 py-1.5 text-xs text-stone-600 shadow-sm">
+          💡 {currentHint}
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-2 right-2 min-h-[40px] min-w-[40px] px-2 py-1.5 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
+            aria-label="キーボード入力に戻る"
+          >
+            戻る
+          </button>
+        )}
+      </header>
+
+      {/* 2. 中央（キャンバス）flex-1 */}
+      <div ref={containerRef} className="flex-1 min-h-0 min-w-0 relative bg-white overflow-hidden">
+        {canvasSize.width > 0 && canvasSize.height > 0 && (
+          <>
+            <SignatureCanvas
+              ref={sigRef}
+              canvasProps={{
+                width: canvasSize.width,
+                height: canvasSize.height,
+                className: "absolute inset-0 block touch-none",
+                style: { touchAction: "none", display: "block" },
+              }}
+              minWidth={4}
+              maxWidth={9}
+              penColor="black"
+              velocityFilterWeight={0.7}
+              throttle={16}
+              backgroundColor="rgb(255, 255, 255)"
+              clearOnResize={false}
+            />
+            {/* 575 ガイドライン（横2本 → 3行・横書き用） */}
+            {showGuideLines && (
+              <div
+                className="absolute inset-0 pointer-events-none flex flex-col"
+                aria-hidden
+              >
+                <div className="flex-1 min-h-0" />
+                <div className="h-px shrink-0 bg-stone-300/50" />
+                <div className="flex-1 min-h-0" />
+                <div className="h-px shrink-0 bg-stone-300/50" />
+                <div className="flex-1 min-h-0" />
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* 操作ボタン（下部・押しやすい位置） */}
-      <div className="shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 bg-white border-t border-stone-200 safe-area-pb">
+      {/* 3. フッター（ボタンエリア）h-24 固定 */}
+      <footer className="shrink-0 h-24 flex items-center justify-between gap-4 px-4 sm:px-6 bg-white border-t border-stone-200 safe-area-pb">
         <button
           type="button"
           onClick={handleClear}
-          className="h-16 min-h-[64px] min-w-[140px] sm:min-w-[160px] px-6 rounded-2xl bg-red-100 text-red-800 font-bold text-lg sm:text-xl hover:bg-red-200 active:bg-red-300 transition-colors touch-manipulation"
+          className="h-14 min-h-[56px] min-w-[120px] sm:min-w-[140px] px-4 rounded-2xl bg-red-100 text-red-800 font-bold text-base sm:text-lg hover:bg-red-200 active:bg-red-300 transition-colors touch-manipulation"
         >
           書き直す（消去）
         </button>
         <button
           type="button"
           onClick={handleComplete}
-          className="h-16 min-h-[64px] min-w-[140px] sm:min-w-[160px] px-6 rounded-2xl bg-green-600 text-white font-bold text-lg sm:text-xl hover:bg-green-700 active:bg-green-800 transition-colors touch-manipulation"
+          className="h-14 min-h-[56px] min-w-[120px] sm:min-w-[140px] px-4 rounded-2xl bg-green-600 text-white font-bold text-base sm:text-lg hover:bg-green-700 active:bg-green-800 transition-colors touch-manipulation"
         >
           これで決める（完了）
         </button>
-      </div>
+      </footer>
     </div>
   );
 }
