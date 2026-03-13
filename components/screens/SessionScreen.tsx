@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import FamilyGallery from '@/components/FamilyGallery';
 import HandwritingCanvas from '@/components/HandwritingCanvas';
 import {
@@ -306,24 +307,27 @@ export default function SessionScreen({
       case 2:
         return (
           <>
-            {/* 手書きキャンバス（フルスクリーン） */}
-            {showHandwritingCanvas && (
-              <HandwritingCanvas
-                kigo={kigo ?? ''}
-                onClose={() => setShowHandwritingCanvas(false)}
-                onComplete={async (dataUrl) => {
-                  setShowHandwritingCanvas(false);
-                  await onHandwritingComplete?.(dataUrl);
-                }}
-                nudgeHints={[
-                  kigo?.trim()
-                    ? `お父さん、『${kigo}』の俳句を書いてみようか`
-                    : 'お父さん、今の季節の言葉を書いてみようか',
-                  'ゆっくり、指でなぞってみてね',
-                  '思いついた言葉を、そのまま書いてみましょう',
-                ]}
-              />
-            )}
+            {/* 手書きキャンバス（Portal で body に描画し、親の max-width 制約を完全回避） */}
+            {showHandwritingCanvas &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <HandwritingCanvas
+                  kigo={kigo ?? ''}
+                  onClose={() => setShowHandwritingCanvas(false)}
+                  onComplete={async (dataUrl) => {
+                    setShowHandwritingCanvas(false);
+                    await onHandwritingComplete?.(dataUrl);
+                  }}
+                  nudgeHints={[
+                    kigo?.trim()
+                      ? `お父さん、『${kigo}』の俳句を書いてみようか`
+                      : 'お父さん、今の季節の言葉を書いてみようか',
+                    'ゆっくり、指でなぞってみてね',
+                    '思いついた言葉を、そのまま書いてみましょう',
+                  ]}
+                />,
+                document.body
+              )}
 
             {/* OCR 読み取り中オーバーレイ */}
             {isHandwritingOcrLoading && (

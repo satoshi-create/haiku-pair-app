@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import SignatureCanvas from "react-signature-canvas";
+
+/** URL に ?handwritingDebug=1 があるとデバッグ表示を有効にする */
+const DEBUG_PARAM = "handwritingDebug";
 
 interface HandwritingCanvasProps {
   /** 現在選択中の季語（カンペ・ナッジに表示） */
@@ -25,10 +29,17 @@ export default function HandwritingCanvas({
   onClose,
   nudgeHints,
 }: HandwritingCanvasProps) {
+  const searchParams = useSearchParams();
+  const debug = searchParams.get(DEBUG_PARAM) === "1";
   const sigRef = useRef<SignatureCanvas>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hintIndex, setHintIndex] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [debugInfo, setDebugInfo] = useState<{
+    viewport: { w: number; h: number };
+    container: { w: number; h: number };
+    aspectRatio: number;
+  } | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -41,6 +52,26 @@ export default function HandwritingCanvas({
         const h = Math.round(height);
         if (w > 0 && h > 0) {
           setCanvasSize({ width: w, height: h });
+          if (debug && typeof window !== "undefined") {
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const aspect = h > 0 ? w / h : 0;
+            const info = {
+              viewport: { w: vw, h: vh },
+              container: { w, h },
+              aspectRatio: Math.round(aspect * 100) / 100,
+            };
+            setDebugInfo(info);
+            console.debug("[HandwritingCanvas]", {
+              viewport: `${vw}×${vh}`,
+              container: `${w}×${h}`,
+              aspectRatio: aspect,
+              isPortrait: h > w,
+              expectedAspect: "0.75 (3:4)",
+            });
+          } else if (!debug) {
+            setDebugInfo(null);
+          }
         }
       });
     };
@@ -52,7 +83,7 @@ export default function HandwritingCanvas({
       clearTimeout(timeoutId);
       ro.disconnect();
     };
-  }, []);
+  }, [debug]);
 
   const resolvedHints = useMemo(() => {
     if (nudgeHints && nudgeHints.length > 0) return nudgeHints;
@@ -85,14 +116,34 @@ export default function HandwritingCanvas({
       className="fixed inset-0 z-30 flex flex-col overflow-hidden bg-white"
       style={{
         touchAction: "none",
-        height: "100svh",
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: "100vw",
+        height: "100dvh",
         maxHeight: "100svh",
         paddingBottom: "max(5.5rem, calc(88px + env(safe-area-inset-bottom)))",
       }}
     >
-      {/* 1. ヘッダー（季語・ナッジ）h-auto */}
-      <header className="shrink-0 h-auto px-4 py-2 sm:py-3 bg-amber-50/95 border-b border-amber-200/80 relative">
-        <p className="text-3xl sm:text-4xl font-bold text-stone-800 text-center">
+      {/* 1. ヘッダー（季語・ナッジ・戻る）w-full・余白最小で端まで */}
+      <header className="shrink-0 flex flex-col gap-2 w-full px-2 py-3 sm:py-4 bg-amber-50/95 border-b border-amber-200/80">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1 rounded-lg bg-stone-100/95 px-2 py-1.5 text-xs text-stone-600 shadow-sm">
+            💡 {currentHint}
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 min-h-[40px] min-w-[40px] px-2 py-1.5 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
+              aria-label="キーボード入力に戻る"
+            >
+              戻る
+            </button>
+          )}
+        </div>
+        <p className="text-2xl sm:text-3xl font-bold text-stone-800 text-center">
           {kigo?.trim() ? (
             <>
               季語：<span className="text-amber-800">{kigo}</span>
@@ -101,35 +152,24 @@ export default function HandwritingCanvas({
             "季語を決めてから書いてね"
           )}
         </p>
-        <div className="absolute top-2 left-2 max-w-[55%] sm:max-w-[60%] rounded-lg bg-stone-100/95 px-2 py-1.5 text-xs text-stone-600 shadow-sm">
-          💡 {currentHint}
-        </div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-2 right-2 min-h-[40px] min-w-[40px] px-2 py-1.5 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
-            aria-label="キーボード入力に戻る"
-          >
-            戻る
-          </button>
-        )}
       </header>
 
-      {/* 2. キャンバス（縦長 3:4、flex-1 で残り余白を使用） */}
-      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden bg-white">
-        <div
-          ref={containerRef}
-          className="relative h-full aspect-3/4 w-auto max-w-full bg-stone-50 border-x border-stone-200"
-        >
-          {canvasSize.width > 0 && canvasSize.height > 0 && (
+      {/* 2. キャンバス（残り高さをすべて使用、横幅いっぱい） */}
+      <div ref={containerRef} className="flex-1 min-h-0 w-full overflow-hidden bg-white relative">
+        {canvasSize.width > 0 && canvasSize.height > 0 ? (
+          <>
             <SignatureCanvas
               ref={sigRef}
               canvasProps={{
                 width: canvasSize.width,
                 height: canvasSize.height,
                 className: "absolute inset-0 block touch-none",
-                style: { touchAction: "none", display: "block" },
+                style: {
+                  touchAction: "none",
+                  display: "block",
+                  border: "none",
+                  outline: "none",
+                },
               }}
               minWidth={4}
               maxWidth={9}
@@ -139,13 +179,23 @@ export default function HandwritingCanvas({
               backgroundColor="rgb(255, 255, 255)"
               clearOnResize={false}
             />
-          )}
-        </div>
+            <div
+              className="absolute inset-0 pointer-events-none flex flex-col"
+              aria-hidden
+            >
+              <div className="flex-1 min-h-0" />
+              <div className="h-px shrink-0 bg-stone-300/60" />
+              <div className="flex-1 min-h-0" />
+              <div className="h-px shrink-0 bg-stone-300/60" />
+              <div className="flex-1 min-h-0" />
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/* 3. フッター（ボタン）ビューポート下部に固定、タブレットでも常に表示 */}
       <footer
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-white border-t border-stone-200 min-h-[88px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-2 w-full px-2 py-4 bg-white border-t border-stone-200 min-h-[88px]"
         style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <button
@@ -163,6 +213,19 @@ export default function HandwritingCanvas({
           これで決める（完了）
         </button>
       </footer>
+
+      {/* デバッグオーバーレイ（?handwritingDebug=1 で表示） */}
+      {debug && debugInfo && (
+        <div
+          className="fixed left-2 bottom-20 z-50 rounded-lg bg-black/80 px-3 py-2 font-mono text-xs text-green-400 shadow-lg"
+          aria-live="polite"
+        >
+          <div>viewport: {debugInfo.viewport.w}×{debugInfo.viewport.h}</div>
+          <div>container: {debugInfo.container.w}×{debugInfo.container.h}</div>
+          <div>aspect: {debugInfo.aspectRatio} {debugInfo.container.h > debugInfo.container.w ? "(縦長✓)" : "(横長)"}</div>
+          <div className="mt-1 text-amber-300 text-[10px]">?handwritingDebug=1</div>
+        </div>
+      )}
     </div>
   );
 }
