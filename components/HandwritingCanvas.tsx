@@ -7,6 +7,12 @@ import SignatureCanvas from "react-signature-canvas";
 /** URL に ?handwritingDebug=1 があるとデバッグ表示を有効にする */
 const DEBUG_PARAM = "handwritingDebug";
 
+/** 作句のヒント（写真解析由来） */
+export interface HintBannerData {
+  sceneDescription?: string;
+  haikuHints?: string[];
+}
+
 interface HandwritingCanvasProps {
   /** 現在選択中の季語（カンペ・ナッジに表示） */
   kigo?: string;
@@ -16,6 +22,10 @@ interface HandwritingCanvasProps {
   onClose?: () => void;
   /** 補助者向けナッジ表示テキスト（複数、順にローテーション可）。季語を含む場合は {kigo} で埋め込み */
   nudgeHints?: string[];
+  /** 作句のヒント（写真解析）。Step 2 と同様のバナーをヘッダー最上部に表示 */
+  hintBanner?: HintBannerData | null;
+  /** AIからの提案（Step 3 で相談した結果）。ヒントバナーに表示 */
+  aiSuggestions?: string[];
 }
 
 /**
@@ -28,6 +38,8 @@ export default function HandwritingCanvas({
   onComplete,
   onClose,
   nudgeHints,
+  hintBanner = null,
+  aiSuggestions = [],
 }: HandwritingCanvasProps) {
   const searchParams = useSearchParams();
   const debug = searchParams.get(DEBUG_PARAM) === "1";
@@ -126,10 +138,36 @@ export default function HandwritingCanvas({
         paddingBottom: "max(5.5rem, calc(88px + env(safe-area-inset-bottom)))",
       }}
     >
-      {/* 1. ヘッダー（お題ボード）1.戻る 2.季語 3.ナッジ */}
-      <header className="shrink-0 flex flex-col w-full bg-amber-50/95 border-b border-amber-200/80">
-        {/* 最上部：戻るボタンのみ右寄せ */}
-        {onClose && (
+      {/* 1. ヘッダー（お題ボード）1.作句のヒント 2.季語 3.ナッジ */}
+      <header className="shrink-0 flex flex-col w-full bg-amber-50/95 border-b border-amber-200/80 overflow-y-auto min-h-0">
+        {/* 最上部：作句のヒントバナー（写真解析 or AI提案）+ 戻る */}
+        {(hintBanner || aiSuggestions.length > 0) && (
+          <div className="flex items-start justify-between gap-2 px-2 pt-2 pb-1">
+            <div className="min-w-0 flex-1 rounded-lg border border-amber-200/80 bg-amber-50/90 px-2 py-1.5">
+              <p className="text-xs font-semibold text-amber-800 mb-0.5">作句のヒント</p>
+              {hintBanner?.sceneDescription && (
+                <p className="text-xs text-stone-700 line-clamp-2 leading-snug">{hintBanner.sceneDescription}</p>
+              )}
+              {hintBanner?.haikuHints?.[0] && (
+                <p className="text-xs text-stone-600 mt-0.5">💡 {hintBanner.haikuHints[0]}</p>
+              )}
+              {aiSuggestions[0] && !hintBanner?.sceneDescription && (
+                <p className="text-xs text-stone-700 line-clamp-2">{aiSuggestions[0]}</p>
+              )}
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="shrink-0 min-h-[36px] min-w-[36px] px-2 py-1 rounded-lg bg-stone-200 text-stone-700 text-sm font-semibold hover:bg-stone-300 touch-manipulation"
+                aria-label="キーボード入力に戻る"
+              >
+                戻る
+              </button>
+            )}
+          </div>
+        )}
+        {!(hintBanner || aiSuggestions.length > 0) && onClose && (
           <div className="flex justify-end px-2 pt-2">
             <button
               type="button"
@@ -141,7 +179,7 @@ export default function HandwritingCanvas({
             </button>
           </div>
         )}
-        {/* 中央：季語 */}
+        {/* 中段：季語 */}
         <p className="text-2xl sm:text-3xl font-bold text-stone-800 text-center px-4 py-2">
           {kigo?.trim() ? (
             <>

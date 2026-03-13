@@ -325,6 +325,15 @@ export default function SessionScreen({
                     'ゆっくり、指でなぞってみてね',
                     '思いついた言葉を、そのまま書いてみましょう',
                   ]}
+                  hintBanner={
+                    imageSuggestions
+                      ? {
+                          sceneDescription: imageSuggestions.scene_description,
+                          haikuHints: imageSuggestions.haiku_hints,
+                        }
+                      : null
+                  }
+                  aiSuggestions={aiSuggestions}
                 />,
                 document.body
               )}
