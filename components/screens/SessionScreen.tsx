@@ -292,15 +292,6 @@ export default function SessionScreen({
                 </>
               )}
             </div>
-
-            <button
-              type="button"
-              disabled={!kigo || imageAnalyzing}
-              onClick={() => onStepChange(2)}
-              className="w-full bg-stone-800 text-white text-xl sm:text-2xl py-3 sm:py-4 rounded-2xl hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              句を詠む
-            </button>
           </div>
         );
 
@@ -356,7 +347,7 @@ export default function SessionScreen({
                   （ご家族の句より：{SAMPLE_FAMILY_HAIKU.replace(/　/g, ' ')}）
                 </p>
                 <textarea
-                  value={myHaiku}
+                  value={myHaiku ?? ''}
                   onChange={(e) => {
                     onMyHaikuChange(e.target.value);
                     onSetSubmitted(false);
@@ -406,12 +397,14 @@ export default function SessionScreen({
               <div className="mb-5 sm:mb-6">
                 <p className="text-sm sm:text-base text-stone-700 mb-2 sm:mb-3">いまの句（編集できます）</p>
                 <textarea
-                  value={myHaiku}
+                  value={myHaiku ?? ''}
                   onChange={(e) => {
                     onMyHaikuChange(e.target.value);
                     onSetSubmitted(false);
                   }}
                   placeholder="句を入力してください"
+                  readOnly={false}
+                  autoComplete="off"
                   className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[80px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500 scroll-mt-24"
                 />
               </div>
@@ -480,12 +473,17 @@ export default function SessionScreen({
         return (
           <div className="space-y-4 sm:space-y-5">
             <div className="bg-white/80 rounded-2xl p-4 sm:p-5 lg:p-6 border border-stone-200">
-              <p className="text-base sm:text-lg text-stone-700 mb-2 sm:mb-3">この句でよろしければ、みんなに送信します。</p>
-              <div className="bg-stone-50 rounded-xl p-4 sm:p-5 border border-stone-200">
-                <p className="text-lg sm:text-xl text-stone-800 leading-relaxed whitespace-pre-wrap">
-                  {myHaiku || 'まだ句が書かれていません。'}
-                </p>
-              </div>
+              <p className="text-base sm:text-lg text-stone-700 mb-2 sm:mb-3">この句でよろしければ、みんなに送信します。必要なら訂正できます。</p>
+              <textarea
+                value={myHaiku ?? ''}
+                onChange={(e) => {
+                  onMyHaikuChange(e.target.value);
+                  onSetSubmitted(false);
+                }}
+                placeholder="句を入力してください"
+                className="w-full p-4 sm:p-5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 min-h-[100px] text-lg sm:text-xl text-stone-900 placeholder:text-stone-500"
+              />
+
             </div>
 
             <button

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { kigoDatabase, searchKigo } from '@/lib/kigo';
 
 interface KigoDictScreenProps {
@@ -56,60 +56,62 @@ export default function KigoDictScreen({ onClose, onSelectKigo }: KigoDictScreen
           ))}
         </div>
 
-        {/* 季語詳細表示 */}
-        {selectedKigo && kigoDatabase[selectedKigo] && (
-          <div className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border-2 border-amber-200 slide-in">
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-2xl font-bold text-stone-800">{selectedKigo}</h3>
-              <button
-                onClick={() => setSelectedKigo(null)}
-                className="text-stone-400 hover:text-stone-600 text-xl"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="text-xl text-amber-700 mb-2">
-              {kigoDatabase[selectedKigo].season}の季語
-            </div>
-            <p className="text-stone-700 text-xl mb-4">{kigoDatabase[selectedKigo].description}</p>
-            <div>
-              <div className="text-xl font-bold text-stone-600 mb-2">例句：</div>
-              {kigoDatabase[selectedKigo].examples.map((ex, i) => (
-                <p key={i} className="text-stone-700 text-xl mb-1 pl-4 border-l-2 border-amber-300">
-                  {ex}
-                </p>
-              ))}
-            </div>
-            {onSelectKigo && (
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectKigo(selectedKigo, kigoDatabase[selectedKigo].season);
-                  onClose();
-                }}
-                className="mt-6 w-full bg-stone-800 text-white text-xl py-4 rounded-xl hover:bg-stone-700"
-              >
-                この季語をお題にする
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* 季語一覧 */}
+        {/* 季語一覧：選択季語の直上に「解説・例句・この季語をお題にする」を動的表示 */}
         <div className="grid grid-cols-3 gap-2">
           {searchKigo(kigoSearchQuery).map((k) => (
-            <button
-              key={k}
-              onClick={() => setSelectedKigo(k === selectedKigo ? null : k)}
-              className={`p-4 rounded-lg text-xl text-left transition-all ${
-                selectedKigo === k
-                  ? 'bg-amber-100 border-2 border-amber-400 text-amber-800 font-bold'
-                  : 'bg-stone-50 border border-stone-200 text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              <div className="font-bold">{k}</div>
-              <div className="text-base text-stone-500">{kigoDatabase[k].season}</div>
-            </button>
+            <React.Fragment key={k}>
+              {selectedKigo === k && kigoDatabase[k] && (
+                <div className="col-span-3 mb-2 bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xl font-bold text-stone-800">{k}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedKigo(null)}
+                      className="text-stone-400 hover:text-stone-600 text-lg"
+                      aria-label="選択を解除"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-stone-600 mb-1">{kigoDatabase[k].season}の季語</p>
+                  <p className="text-stone-700 text-base mb-3">{kigoDatabase[k].description}</p>
+                  <div className="mb-3">
+                    <span className="text-base font-bold text-stone-600">例句：</span>
+                    <ul className="mt-1 space-y-0.5">
+                      {kigoDatabase[k].examples.map((ex, i) => (
+                        <li key={i} className="text-stone-700 text-base pl-4 border-l-2 border-amber-300">
+                          {ex}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {onSelectKigo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectKigo(k, kigoDatabase[k].season);
+                        onClose();
+                      }}
+                      className="w-full bg-stone-800 text-white text-lg py-3 rounded-xl hover:bg-stone-700 font-semibold"
+                    >
+                      この季語をお題にする
+                    </button>
+                  )}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedKigo(k === selectedKigo ? null : k)}
+                className={`p-4 rounded-lg text-xl text-left transition-all ${
+                  selectedKigo === k
+                    ? 'bg-amber-100 border-2 border-amber-400 text-amber-800 font-bold'
+                    : 'bg-stone-50 border border-stone-200 text-stone-700 hover:bg-stone-100'
+                }`}
+              >
+                <div className="font-bold">{k}</div>
+                <div className="text-base text-stone-500">{kigoDatabase[k].season}</div>
+              </button>
+            </React.Fragment>
           ))}
         </div>
 

@@ -163,6 +163,23 @@ export default function GalleryScreen({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => setViewMode("list")}
+                    className={`p-2.5 rounded-xl transition-colors ${
+                      viewMode === "list"
+                        ? "bg-stone-800 text-white"
+                        : "bg-stone-200 text-stone-600 hover:bg-stone-300"
+                    }`}
+                    aria-label="リスト表示"
+                    title="リスト表示"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <line x1="4" y1="6" x2="20" y2="6" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="4" y1="12" x2="20" y2="12" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="4" y1="18" x2="20" y2="18" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setViewMode("card")}
                     className={`p-2.5 rounded-xl transition-colors ${
                       viewMode === "card"
@@ -177,23 +194,6 @@ export default function GalleryScreen({
                       <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth="2" />
                       <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="2" />
                       <rect x="14" y="14" width="7" height="7" rx="1" strokeWidth="2" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className={`p-2.5 rounded-xl transition-colors ${
-                      viewMode === "list"
-                        ? "bg-stone-800 text-white"
-                        : "bg-stone-200 text-stone-600 hover:bg-stone-300"
-                    }`}
-                    aria-label="リスト表示"
-                    title="リスト表示"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <line x1="4" y1="6" x2="20" y2="6" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="4" y1="12" x2="20" y2="12" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="4" y1="18" x2="20" y2="18" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
                 </div>

@@ -53,7 +53,21 @@ export default function HaigaModal({
         ) : (
           <div className="space-y-5">
             <div className="bg-gradient-to-br from-stone-100 to-amber-50 p-5 rounded-xl border border-stone-200">
-              <p className="text-base font-bold text-stone-700 mb-2">情景描写</p>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <p className="text-base font-bold text-stone-700 shrink-0">情景描写</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(description).then(
+                      () => alert('プロンプトをコピーしました'),
+                      () => alert('コピーに失敗しました')
+                    );
+                  }}
+                  className="shrink-0 text-sm px-3 py-1.5 rounded-lg bg-stone-200 text-stone-700 hover:bg-stone-300 font-medium"
+                >
+                  プロンプトをコピー
+                </button>
+              </div>
               <p className="text-stone-700 leading-relaxed text-lg">{description}</p>
             </div>
             <p className="text-base text-stone-500 text-center">

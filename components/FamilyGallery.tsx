@@ -38,7 +38,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const [loading, setLoading] = useState(true);
   const [list, setList] = useState<FamilyHaikuRow[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<FamilyHaikuRow | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   /** ゴーストクリック対策：切り替え直後のクールダウン（ms） */
   const [switchCooldown, setSwitchCooldown] = useState(false);
@@ -112,7 +112,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     if (
       viewMode !== "card" ||
       filteredList.length <= visibleCount ||
-      expandedImageUrl != null ||
+      expandedRow != null ||
       lastBatchLoadedRef.current
     )
       return;
@@ -124,7 +124,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
         return next;
       });
     }, BATCH_DELAY_MS);
-  }, [viewMode, filteredList.length, visibleCount, expandedImageUrl]);
+  }, [viewMode, filteredList.length, visibleCount, expandedRow]);
 
   const handleLastCardImageLoad = useCallback(() => {
     scheduleNextBatch();
@@ -137,7 +137,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     if (
       viewMode !== "card" ||
       visibleCount >= filteredList.length ||
-      expandedImageUrl != null
+      expandedRow != null
     )
       return;
     const lastRow = visibleList[visibleList.length - 1];
@@ -150,7 +150,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       });
     }, BATCH_DELAY_MS);
     return () => clearTimeout(id);
-  }, [viewMode, visibleCount, filteredList.length, visibleList, expandedImageUrl]);
+  }, [viewMode, visibleCount, filteredList.length, visibleList, expandedRow]);
 
   if (loading) {
     return (
@@ -175,7 +175,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
 
   return (
     <div
-      className={`space-y-6 max-h-[90dvh] overflow-y-auto ${expandedImageUrl ? "overflow-hidden" : ""}`}
+      className={`space-y-6 max-h-[90dvh] overflow-y-auto ${expandedRow ? "overflow-hidden" : ""}`}
     >
       <div className="bg-white/80 backdrop-blur rounded-2xl p-6 shadow-lg border border-stone-200">
         <div className="flex items-center justify-between gap-4 mb-6">
@@ -273,7 +273,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setExpandedImageUrl(row.image_url);
+                            setExpandedRow(row);
                           }}
                           className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 rounded-lg relative"
                           aria-label="画像を拡大"
@@ -355,7 +355,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setExpandedImageUrl(row.image_url);
+                            setExpandedRow(row);
                           }}
                           className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-inset relative"
                           aria-label="画像を拡大"
@@ -439,14 +439,14 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
         </div>
       </div>
 
-      {/* 画像拡大モーダル（モーダル内モーダル） */}
-      {expandedImageUrl && (
+      {/* 画像拡大モーダル：写真＋俳句を表示 */}
+      {expandedRow && expandedRow.image_url && (
         <div
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setExpandedImageUrl(null)}
+          onClick={() => setExpandedRow(null)}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Escape" && setExpandedImageUrl(null)}
+          onKeyDown={(e) => e.key === "Escape" && setExpandedRow(null)}
           aria-label="閉じる"
         >
           <div
@@ -454,33 +454,53 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
-              const imgSrc = getCloudinaryUrl(expandedImageUrl, CLOUDINARY_ZOOM_WIDTH);
+              const imgSrc = getCloudinaryUrl(expandedRow.image_url, CLOUDINARY_ZOOM_WIDTH);
               if (imgSrc.startsWith("data:")) {
                 return (
-                  // eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応
-                  <img
-                    src={imgSrc}
-                    alt="拡大表示"
-                    loading="lazy"
-                    className="max-w-full max-h-[90dvh] w-auto h-auto object-contain rounded-lg"
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応 */}
+                    <img
+                      src={imgSrc}
+                      alt="拡大表示"
+                      loading="lazy"
+                      className="max-w-full max-h-[70dvh] w-auto h-auto object-contain rounded-lg"
+                    />
+                    <div className="w-full max-w-[1200px] bg-white/95 rounded-xl p-6 text-center">
+                      <p className="text-xl sm:text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap">
+                        {(expandedRow.haiku_text ?? "").replace(/　/g, " ")}
+                      </p>
+                      <p className="text-base text-stone-500 mt-2">
+                        {formatOriginDate(expandedRow.origin_date)}
+                      </p>
+                    </div>
+                  </>
                 );
               }
               return (
-                <div className="relative w-full max-w-[1200px] h-[80dvh] min-h-[200px] max-h-[90dvh]">
-                  <Image
-                    src={imgSrc}
-                    alt="拡大表示"
-                    fill
-                    sizes="95vw"
-                    className="object-contain rounded-lg"
-                  />
-                </div>
+                <>
+                  <div className="relative w-full max-w-[1200px] h-[60dvh] min-h-[200px] max-h-[70dvh]">
+                    <Image
+                      src={imgSrc}
+                      alt="拡大表示"
+                      fill
+                      sizes="95vw"
+                      className="object-contain rounded-lg"
+                    />
+                  </div>
+                  <div className="w-full max-w-[1200px] bg-white/95 rounded-xl p-6 text-center">
+                    <p className="text-xl sm:text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap">
+                      {(expandedRow.haiku_text ?? "").replace(/　/g, " ")}
+                    </p>
+                    <p className="text-base text-stone-500 mt-2">
+                      {formatOriginDate(expandedRow.origin_date)}
+                    </p>
+                  </div>
+                </>
               );
             })()}
             <button
               type="button"
-              onClick={() => setExpandedImageUrl(null)}
+              onClick={() => setExpandedRow(null)}
               className="absolute -top-2 -right-2 w-12 h-12 min-h-[44px] min-w-[44px] rounded-full bg-white text-stone-700 text-xl flex items-center justify-center hover:bg-stone-100 shadow-lg"
               aria-label="閉じる"
             >
