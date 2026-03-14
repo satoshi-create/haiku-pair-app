@@ -128,6 +128,8 @@ export default function HaikuPairApp() {
   const [haikuHistory, setHaikuHistory] = useState<HaikuHistoryEntry[]>([]);
   /** 相手の句を履歴に保存したか（1回だけ保存） */
   const partnerSavedToHistoryRef = useRef(false);
+  /** 指書き画像（data URL）。デジタル半紙で書いた直後のみ保持し、提出時に履歴に紐づける */
+  const [lastHandwritingDataUrl, setLastHandwritingDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setHaikuHistory(loadHistory());
@@ -299,6 +301,7 @@ export default function HaikuPairApp() {
     kigoVal: string,
     seasonVal: string,
     author = "私",
+    handwritingImageUrl?: string | null,
   ) => {
     const newEntry: HaikuHistoryEntry = {
       id: Date.now(),
@@ -307,6 +310,7 @@ export default function HaikuPairApp() {
       season: seasonVal,
       author,
       date: new Date().toISOString(),
+      ...(handwritingImageUrl && { handwriting_image_url: handwritingImageUrl }),
     };
     setHaikuHistory((prev) => {
       const updated = [newEntry, ...prev];
@@ -567,6 +571,7 @@ export default function HaikuPairApp() {
     try {
       const text = await recognizeHandwriting(dataUrl);
       setMyHaiku(text);
+      setLastHandwritingDataUrl(dataUrl);
       setActiveStep(3);
     } catch (error) {
       console.error("Handwriting OCR error:", error);
@@ -849,7 +854,8 @@ export default function HaikuPairApp() {
     }
 
     // 提出と同時に履歴に保存（ギャラリーに表示）
-    saveToHistory(myHaiku.trim(), kigo, season, "私");
+    saveToHistory(myHaiku.trim(), kigo, season, "私", lastHandwritingDataUrl ?? undefined);
+    setLastHandwritingDataUrl(null);
 
     // Supabase に保存（失敗してもUIは壊さない）
     setIsSubmittingHaiku(true);

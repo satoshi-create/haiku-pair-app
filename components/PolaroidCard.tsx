@@ -55,7 +55,7 @@ export default function PolaroidCard({
         } as React.CSSProperties
       }
     >
-      {/* 上部：写真（正方形）+ 指書きオーバーレイ */}
+      {/* 上部：写真（正方形） */}
       <div className="polaroid-card__photo-area">
         <div className="polaroid-card__photo-inner">
           {imageUrl ? (
@@ -69,18 +69,10 @@ export default function PolaroidCard({
               <span className="polaroid-card__photo-placeholder-icon" aria-hidden>📷</span>
             </div>
           )}
-          {handwritingImageUrl && (
-            <img
-              src={handwritingImageUrl}
-              alt=""
-              className="polaroid-card__handwriting"
-              aria-hidden
-            />
-          )}
         </div>
       </div>
 
-      {/* 下部：俳句 + 作成日 */}
+      {/* 下部：俳句 + 作成日 + 落款（指書き） */}
       <div className="polaroid-card__caption">
         <p
           className={`polaroid-card__haiku font-kaisei ${
@@ -90,6 +82,14 @@ export default function PolaroidCard({
           {haiku.replace(/　/g, "\n")}
         </p>
         <p className="polaroid-card__date">{formatDate(date)}</p>
+        {handwritingImageUrl && (
+          <img
+            src={handwritingImageUrl}
+            alt=""
+            className="polaroid-card__handwriting"
+            aria-hidden
+          />
+        )}
       </div>
     </div>
   );

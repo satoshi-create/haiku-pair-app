@@ -36,6 +36,7 @@ function normalizeEntry(entry: HaikuHistoryEntry): HaikuHistoryEntry {
     author: typeof entry.author === "string" ? entry.author : "—",
     date: typeof entry.date === "string" ? entry.date : new Date().toISOString(),
     image_url: entry.image_url ?? null,
+    handwriting_image_url: entry.handwriting_image_url ?? null,
     tags: Array.isArray(entry.tags) ? entry.tags : [],
   };
 }
@@ -53,6 +54,28 @@ function formatDate(dateStr: string): string {
   }
 }
 
+/**
+ * Supabase のエントリに、localStorage の handwriting_image_url をマージする。
+ * 照合条件: haiku（内容）と日付（YYYY-MM-DD）が一致するものを同一句とみなす。
+ */
+function mergeHandwritingFromLocal(
+  apiEntries: HaikuHistoryEntry[],
+  localEntries: HaikuHistoryEntry[],
+): HaikuHistoryEntry[] {
+  return apiEntries.map((apiEntry) => {
+    const localMatch = localEntries.find((local) => {
+      if (local.haiku !== apiEntry.haiku) return false;
+      const apiDay = apiEntry.date?.slice(0, 10);
+      const localDay = local.date?.slice(0, 10);
+      return apiDay && localDay && apiDay === localDay;
+    });
+    if (localMatch?.handwriting_image_url) {
+      return { ...apiEntry, handwriting_image_url: localMatch.handwriting_image_url };
+    }
+    return apiEntry;
+  });
+}
+
 export default function GalleryScreen({
   history,
   onOpenShareCard,
@@ -64,8 +87,21 @@ export default function GalleryScreen({
   const [loading, setLoading] = useState(true);
   const [expandedEntry, setExpandedEntry] = useState<HaikuHistoryEntry | null>(null);
   const [printEntry, setPrintEntry] = useState<HaikuHistoryEntry | null>(null);
+  /** 印刷プレビューで落款（指書き）を表示するか。デフォルトはオフ */
+  const [showHandwritingInPrint, setShowHandwritingInPrint] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+
+  /** 印刷モーダルを開くたびに落款表示をリセット */
+  useEffect(() => {
+    if (!printEntry) return;
+    setShowHandwritingInPrint(false);
+  }, [printEntry]);
+
+  /** 印刷モーダルを開くたびに落款オプションをデフォルト（なし）にリセット */
+  useEffect(() => {
+    if (printEntry) setShowHandwritingInPrint(false);
+  }, [printEntry?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +118,9 @@ export default function GalleryScreen({
       .then((fromApi) => {
         if (cancelled) return;
         if (fromApi.length > 0) {
-          setDisplayList(fromApi.map(normalizeEntry));
+          const apiNormalized = fromApi.map(normalizeEntry);
+          const merged = mergeHandwritingFromLocal(apiNormalized, base);
+          setDisplayList(merged);
         } else {
           setDisplayList(base);
         }
@@ -402,19 +440,36 @@ export default function GalleryScreen({
       {printEntry &&
         typeof document !== "undefined" &&
         createPortal(
-          <div className="polaroid-print-root fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-6">
+          <div className="polaroid-print-root fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-6 overflow-hidden">
             <div className="no-print fixed inset-0" onClick={() => setPrintEntry(null)} aria-hidden />
             <div
-              className="relative z-10 flex flex-col items-center gap-4 max-w-[89mm] w-full"
+              className="relative z-10 flex flex-col items-center gap-8 max-w-[89mm] w-full py-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <PolaroidCard
-                imageUrl={printEntry.image_url ?? null}
-                handwritingImageUrl={(printEntry as { handwriting_image_url?: string }).handwriting_image_url}
-                haiku={printEntry.haiku}
-                date={printEntry.date}
-                forPrint={false}
-              />
+              {/* ポラロイドUI（落款は右下に収まる） */}
+              <div className="w-full shrink-0">
+                <PolaroidCard
+                  imageUrl={printEntry.image_url ?? null}
+                  handwritingImageUrl={
+                    showHandwritingInPrint ? (printEntry.handwriting_image_url ?? null) : null
+                  }
+                  haiku={printEntry.haiku}
+                  date={printEntry.date}
+                  forPrint={false}
+                />
+              </div>
+              {/* 落款オプション（指書きデータがある場合のみ表示） */}
+              {printEntry.handwriting_image_url && (
+                <label className="no-print flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showHandwritingInPrint}
+                    onChange={(e) => setShowHandwritingInPrint(e.target.checked)}
+                    className="w-5 h-5 rounded border-stone-300"
+                  />
+                  <span className="text-base font-medium text-stone-800">落款を表示する</span>
+                </label>
+              )}
               <div className="no-print flex gap-3">
                 <button
                   type="button"

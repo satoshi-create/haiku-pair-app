@@ -25,6 +25,8 @@ export interface HaikuHistoryEntry {
   date: string;
   /** 画像URL（Cloudinary等）。未設定時は季節に応じた背景で表示 */
   image_url?: string | null;
+  /** 指書きの筆跡画像（Base64 data URL）。ポラロイドの写真部分にオーバーレイ表示 */
+  handwriting_image_url?: string | null;
   /** AI生成タグ。未設定時は表示しない */
   tags?: string[] | null;
 }
