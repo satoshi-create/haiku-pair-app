@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import {
   getCloudinaryUrl,
   CLOUDINARY_ZOOM_WIDTH,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/haikuHistoryApi";
 import type { HaikuHistoryEntry } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
+import PolaroidCard from "@/components/PolaroidCard";
 
 type ViewMode = "card" | "list";
 
@@ -61,6 +63,7 @@ export default function GalleryScreen({
   const [displayList, setDisplayList] = useState<HaikuHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedEntry, setExpandedEntry] = useState<HaikuHistoryEntry | null>(null);
+  const [printEntry, setPrintEntry] = useState<HaikuHistoryEntry | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 
@@ -257,6 +260,14 @@ export default function GalleryScreen({
                       >
                         🎨
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrintEntry(entry)}
+                        className="text-sm bg-sky-100 text-sky-800 px-3 py-1.5 rounded-lg hover:bg-sky-200 min-h-[36px]"
+                        title="L判で印刷"
+                      >
+                        🖨️
+                      </button>
                       {typeof entry.id === "number" && (
                         <button
                           type="button"
@@ -349,6 +360,13 @@ export default function GalleryScreen({
                         >
                           🎨 俳画を作る
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrintEntry(entry)}
+                          className="min-h-[44px] text-lg bg-sky-100 text-sky-900 px-5 py-2.5 rounded-xl hover:bg-sky-200 font-semibold transition-colors"
+                        >
+                          🖨️ L判で印刷
+                        </button>
                         {typeof entry.id === "number" && (
                           <button
                             type="button"
@@ -379,6 +397,44 @@ export default function GalleryScreen({
         </div>
         </div>
       </div>
+
+      {/* L判印刷モーダル（印刷時はポラロイドのみ表示） */}
+      {printEntry &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="polaroid-print-root fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-6">
+            <div className="no-print fixed inset-0" onClick={() => setPrintEntry(null)} aria-hidden />
+            <div
+              className="relative z-10 flex flex-col items-center gap-4 max-w-[89mm] w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <PolaroidCard
+                imageUrl={printEntry.image_url ?? null}
+                handwritingImageUrl={(printEntry as { handwriting_image_url?: string }).handwriting_image_url}
+                haiku={printEntry.haiku}
+                date={printEntry.date}
+                forPrint={false}
+              />
+              <div className="no-print flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="min-h-[44px] px-6 py-3 text-lg font-bold bg-stone-800 text-white rounded-xl hover:bg-stone-700"
+                >
+                  🖨️ 印刷する
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintEntry(null)}
+                  className="min-h-[44px] px-6 py-3 text-lg font-semibold bg-stone-200 text-stone-800 rounded-xl hover:bg-stone-300"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {expandedEntry && expandedEntry.image_url && (
         <div

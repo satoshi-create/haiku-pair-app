@@ -115,3 +115,157 @@ textarea::placeholder {
 .stagger-2 { animation-delay: 0.2s; }
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
+
+/* Kaisei 明朝（俳句・ポラロイド用） */
+.font-kaisei {
+  font-family: var(--font-kaisei), "Kaisei Opti", "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+
+/* ===== PolaroidCard（L判 89×127mm 印刷用） ===== */
+.polaroid-card {
+  --polaroid-bg: #fafaf9;
+  --polaroid-border: #e7e5e4;
+  background: var(--polaroid-bg);
+  border: 8px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--polaroid-border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 2px;
+  width: 100%;
+  max-width: 89mm;
+  aspect-ratio: 89 / 127;
+}
+
+.polaroid-card__photo-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.polaroid-card__photo-inner {
+  position: relative;
+  width: 100%;
+  min-width: 48px;
+  min-height: 48px;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #f5f5f4;
+}
+
+.polaroid-card__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.polaroid-card__photo-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e7e5e4 0%, #d6d3d1 100%);
+}
+
+.polaroid-card__photo-placeholder-icon {
+  font-size: 2rem;
+  color: #a8a29e;
+  line-height: 1;
+}
+
+.polaroid-card__handwriting {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.polaroid-card__caption {
+  padding: 8px 6px 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.polaroid-card__haiku {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #1c1917;
+  margin: 0 0 6px;
+}
+
+.polaroid-card__haiku--vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: pre-line;
+  display: inline-block;
+  max-height: 4.5em;
+}
+
+.polaroid-card__haiku:not(.polaroid-card__haiku--vertical) {
+  white-space: pre-line;
+}
+
+.polaroid-card__date {
+  font-size: 0.65rem;
+  color: #78716c;
+  margin: 0;
+}
+
+/* 印刷時のみ表示（画面では非表示） */
+.print-only {
+  display: none !important;
+}
+
+/* ===== L判印刷スタイル（Epson EP 89×127mm） ===== */
+@media print {
+  .print-only {
+    display: flex !important;
+  }
+  @page {
+    size: 89mm 127mm;
+    margin: 0;
+  }
+
+  /* 印刷時はアプリ UI を非表示 */
+  body > *:not(.polaroid-print-root) {
+    display: none !important;
+  }
+
+  .polaroid-print-root {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: fixed !important;
+    inset: 0 !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .polaroid-print-root .polaroid-card {
+    color-adjust: exact;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    box-shadow: none !important;
+    border: 6px solid white !important;
+  }
+
+  /* 印刷時にモーダルオーバーレイ・ボタンを非表示（詳細度を上げて確実に適用） */
+  .polaroid-print-root .no-print,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

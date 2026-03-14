@@ -951,7 +951,18 @@ export default function HaikuPairApp() {
       if (upsertError) {
         console.error("[Supabase] haikus upsert failed:", upsertError.message);
       } else {
-        // 投稿成功：クールダウン開始（localStorage に保存してリロード後も維持）
+        // 投稿成功：履歴の最新エントリに image_url を反映（localStorage フォールバック用）
+        if (imageUrlForInsert) {
+          setHaikuHistory((prev) => {
+            const updated = [...prev];
+            if (updated.length > 0) {
+              updated[0] = { ...updated[0], image_url: imageUrlForInsert };
+            }
+            saveHistory(updated);
+            return updated;
+          });
+        }
+        // クールダウン開始（localStorage に保存してリロード後も維持）
         const now = Date.now();
         setLastHaikuSubmitTimestamp(now);
         setIsCoolingDown(true);

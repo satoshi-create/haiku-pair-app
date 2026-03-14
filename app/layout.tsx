@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Kaisei_Opti } from "next/font/google";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const kaiseiOpti = Kaisei_Opti({
+  variable: "--font-kaisei",
+  weight: ["400", "500", "700"],
+  subsets: ["latin", "latin-ext"],
+});
+
 export const metadata: Metadata = {
   title: "AI句会ワークショップ - ペアモード",
   description: "二人で座を組み、同じ季語で句を詠む。AIを活用した俳句ワークショップアプリ。",
@@ -31,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${kaiseiOpti.variable} antialiased`}
       >
         {children}
       </body>
