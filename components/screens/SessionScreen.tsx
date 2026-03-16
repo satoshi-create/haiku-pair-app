@@ -6,6 +6,8 @@ import {
   CLOUDINARY_THUMB_WIDTH,
   CLOUDINARY_ZOOM_WIDTH,
 } from '@/lib/cloudinary';
+import HelpWizardModal from '@/components/modals/HelpWizardModal';
+import { HelpCircle } from 'lucide-react';
 import KigoDictScreen from '@/components/screens/KigoDictScreen';
 import MoraCounter from '@/components/shared/MoraCounter';
 import { useEffect, useState } from 'react';
@@ -138,6 +140,7 @@ export default function SessionScreen({
   const [showKigoDict, setShowKigoDict] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
   const [showEnlargedPhoto, setShowEnlargedPhoto] = useState(false);
+  const [showHelpWizard, setShowHelpWizard] = useState(false);
   /** Step 2: デジタル半紙（手書きエリア）を表示するか */
   const [showHandwritingCanvas, setShowHandwritingCanvas] = useState(false);
   /** Step 3: AI提案アコーディオンの開閉（デフォルトは閉じた状態） */
@@ -633,9 +636,19 @@ export default function SessionScreen({
 
           {/* ステップインジケータ */}
           <div className="mb-0">
-            <p className="text-base sm:text-lg lg:text-xl font-semibold text-stone-800 mb-2">
-              Step {activeStep} / 5 ：{stepLabel(activeStep)}
-            </p>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-base sm:text-lg lg:text-xl font-semibold text-stone-800">
+                Step {activeStep} / 5 ：{stepLabel(activeStep)}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowHelpWizard(true)}
+                className="inline-flex items-center justify-center rounded-full border border-stone-300/80 bg-white/70 text-stone-500 hover:bg-stone-700 hover:text-white transition-colors touch-manipulation shadow-sm px-2 py-1"
+                aria-label="操作ガイドを開く"
+              >
+                <HelpCircle className="w-4 h-4" strokeWidth={2} />
+              </button>
+            </div>
             <div className="flex gap-1.5 sm:gap-2">
               {[1, 2, 3, 4, 5].map((s) => (
                 <div
@@ -751,6 +764,15 @@ export default function SessionScreen({
           </div>
         </div>
       )}
+
+      {/* 操作ガイドモーダル */}
+      <HelpWizardModal
+        show={showHelpWizard}
+        onClose={() => setShowHelpWizard(false)}
+        role={role === 'host' ? 'host' : 'guest'}
+        variant="session"
+        syncStep={activeStep}
+      />
     </div>
   );
 }

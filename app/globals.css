@@ -247,8 +247,8 @@ textarea::placeholder {
     margin: 0;
   }
 
-  /* 印刷時はアプリ UI を非表示 */
-  body > *:not(.polaroid-print-root) {
+  /* 印刷時はアプリ UI を非表示（ヘルプ印刷時は body.help-wizard-print-mode で上書きされるため除外） */
+  body:not(.help-wizard-print-mode) > *:not(.polaroid-print-root) {
     display: none !important;
   }
 
@@ -276,5 +276,37 @@ textarea::placeholder {
   .no-print {
     display: none !important;
     visibility: hidden !important;
+  }
+}
+
+/* ===== ヘルプウィザード印刷（A4横） ===== */
+/* body に .help-wizard-print-mode が付与されている時のみ有効 */
+@page help-wizard {
+  size: A4 landscape;
+  margin: 15mm;
+}
+
+@media print {
+  body.help-wizard-print-mode > *:not(.help-wizard-print-root) {
+    display: none !important;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-root {
+    display: block !important;
+    position: static !important;
+    background: white !important;
+    color: #1c1917 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-root .help-wizard-print-page {
+    page: help-wizard;
+    padding: 10mm;
+    break-after: page;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-root .help-wizard-print-page:last-child {
+    break-after: auto;
   }
 }

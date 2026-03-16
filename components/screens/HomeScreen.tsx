@@ -1,3 +1,9 @@
+"use client";
+
+import { useState } from "react";
+import HelpWizardModal from "@/components/modals/HelpWizardModal";
+import { HelpCircle } from "lucide-react";
+
 interface HomeScreenProps {
   userName: string;
   onUserNameChange: (name: string) => void;
@@ -13,8 +19,10 @@ export default function HomeScreen({
   onJoin,
   onGallery,
 }: HomeScreenProps) {
+  const [showHelpWizard, setShowHelpWizard] = useState(false);
+
   return (
-    <div className="text-center space-y-6 sm:space-y-8">
+    <div className="relative text-center space-y-6 sm:space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold text-stone-800">AI句会ワークショップ</h1>
         <p className="text-base sm:text-lg text-stone-600">朝の散歩の写真から俳句を詠む</p>
@@ -66,6 +74,22 @@ export default function HomeScreen({
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowHelpWizard(true)}
+        className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-stone-800/50 text-white/90 hover:bg-stone-700/60 hover:text-white transition-colors touch-manipulation shadow-lg"
+        aria-label="ホームの操作ガイドを開く"
+      >
+        <HelpCircle className="w-7 h-7" strokeWidth={2} />
+      </button>
+
+      <HelpWizardModal
+        show={showHelpWizard}
+        onClose={() => setShowHelpWizard(false)}
+        variant="home"
+        role="host"
+      />
     </div>
   );
 }

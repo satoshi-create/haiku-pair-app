@@ -1,4 +1,8 @@
+"use client";
+
 import { useState } from 'react';
+import HelpWizardModal from '@/components/modals/HelpWizardModal';
+import { HelpCircle } from 'lucide-react';
 
 interface JoinScreenProps {
   onJoin: (sessionId: string) => void;
@@ -7,9 +11,10 @@ interface JoinScreenProps {
 
 export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
   const [inputId, setInputId] = useState('');
+  const [showHelpWizard, setShowHelpWizard] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
       <div className="bg-white/80 backdrop-blur rounded-lg p-8 shadow-lg border border-stone-200">
         <h2 className="text-2xl font-bold text-stone-800 mb-6 text-center">座に参加</h2>
 
@@ -41,6 +46,22 @@ export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowHelpWizard(true)}
+        className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-stone-800/50 text-white/90 hover:bg-stone-700/60 hover:text-white transition-colors touch-manipulation shadow-lg"
+        aria-label="座に参加の操作ガイドを開く"
+      >
+        <HelpCircle className="w-7 h-7" strokeWidth={2} />
+      </button>
+
+      <HelpWizardModal
+        show={showHelpWizard}
+        onClose={() => setShowHelpWizard(false)}
+        variant="join"
+        role="guest"
+      />
     </div>
   );
 }
