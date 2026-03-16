@@ -16,7 +16,19 @@ export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
   return (
     <div className="relative space-y-6">
       <div className="bg-white/80 backdrop-blur rounded-lg p-8 shadow-lg border border-stone-200">
-        <h2 className="text-2xl font-bold text-stone-800 mb-6 text-center">座に参加</h2>
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-stone-800">座に参加</h2>
+            <button
+              type="button"
+              onClick={() => setShowHelpWizard(true)}
+              className="inline-flex items-center justify-center rounded-full border border-stone-300/80 bg-white/70 text-stone-500 hover:bg-stone-700 hover:text-white transition-colors touch-manipulation shadow-sm px-2 py-1"
+              aria-label="座に参加の操作ガイドを開く"
+            >
+              <HelpCircle className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <input
@@ -46,15 +58,6 @@ export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
           </div>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setShowHelpWizard(true)}
-        className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-stone-800/50 text-white/90 hover:bg-stone-700/60 hover:text-white transition-colors touch-manipulation shadow-lg"
-        aria-label="座に参加の操作ガイドを開く"
-      >
-        <HelpCircle className="w-7 h-7" strokeWidth={2} />
-      </button>
 
       <HelpWizardModal
         show={showHelpWizard}

@@ -636,7 +636,7 @@ export default function SessionScreen({
 
           {/* ステップインジケータ */}
           <div className="mb-0">
-            <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="inline-flex items-center gap-2 mb-2">
               <p className="text-base sm:text-lg lg:text-xl font-semibold text-stone-800">
                 Step {activeStep} / 5 ：{stepLabel(activeStep)}
               </p>

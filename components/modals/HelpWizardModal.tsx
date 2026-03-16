@@ -303,7 +303,7 @@ export default function HelpWizardModal({
         >
           {/* ヘッダー */}
           <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-stone-200">
-            <h2 className="text-xl sm:text-2xl font-bold text-stone-800 font-kaisei">
+            <h2 className="text-xl sm:text-2xl font-bold text-stone-800 font-kaisei text-left">
               {modalTitle}
             </h2>
             <button
