@@ -109,16 +109,7 @@ import { getStepsForVariant } from "@/lib/helpSteps";
                 {/* 右：説明文 */}
                 <div className="flex flex-col gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-stone-700 mb-2">どこを見るか</p>
-                    <ul className="list-disc pl-5 space-y-1 text-base text-stone-600 leading-relaxed">
-                      {currentStep.lookAt.map((item, i) => (
-                        <li key={i}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-stone-700 mb-2">何をするか</p>
-                    <ol className="list-decimal pl-5 space-y-1 text-base text-stone-600 leading-relaxed">
+                    <ol className="space-y-2 text-base text-stone-700 leading-relaxed">
                       {currentStep.actions.map((item, i) => (
                         <li key={i}>{item}</li>
                       ))}
@@ -160,14 +151,7 @@ import { getStepsForVariant } from "@/lib/helpSteps";
                   <h2 className="text-2xl font-bold text-stone-900 mb-4 font-kaisei">
                     【{s.title}】 Step {i + 1} / {totalSteps}
                   </h2>
-                  <p className="text-sm font-semibold text-stone-700 mb-2">どこを見るか</p>
-                  <ul className="list-disc pl-5 space-y-1 text-base text-stone-800 mb-4">
-                    {s.lookAt.map((item, j) => (
-                      <li key={j}>{item}</li>
-                    ))}
-                  </ul>
-                  <p className="text-sm font-semibold text-stone-700 mb-2">何をするか</p>
-                  <ol className="list-decimal pl-5 space-y-1 text-base text-stone-800 mb-4">
+                  <ol className="space-y-2 text-base text-stone-900 mb-4">
                     {s.actions.map((item, j) => (
                       <li key={j}>{item}</li>
                     ))}
