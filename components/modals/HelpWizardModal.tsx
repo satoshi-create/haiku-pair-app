@@ -92,12 +92,12 @@ import { getStepsForVariant } from "@/lib/helpSteps";
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 p-4 sm:p-6">
                 {/* 左：図解エリア（ダミー画像） */}
-                <div className="bg-stone-50 rounded-xl border border-stone-200 aspect-4/3 lg:aspect-square overflow-hidden">
+                <div className="bg-stone-200/70 rounded-xl border border-stone-200 aspect-4/3 lg:aspect-square overflow-hidden p-3">
                   <img
                     src="/assets/guide/step/help-sample.png"
                     alt="操作ガイドの図解サンプル"
-                    className="w-full h-full object-contain bg-white"
-                    loading="lazy"
+                    className="w-full h-full object-contain bg-stone-200/70 rounded-lg"
+                    loading="eager"
                   />
                 </div>
 
@@ -146,14 +146,29 @@ import { getStepsForVariant } from "@/lib/helpSteps";
                   <h2 className="text-2xl font-bold text-stone-900 mb-4 font-kaisei">
                     【{s.title}】 Step {i + 1} / {totalSteps}
                   </h2>
-                  <ol className="space-y-2 text-base text-stone-900 mb-4">
-                    {s.actions.map((item, j) => (
-                      <li key={j}>{item}</li>
-                    ))}
-                  </ol>
-                  <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-stone-50">
-                    <p className="text-base text-stone-900 font-kaisei">「{s.nudge}」</p>
-                  </blockquote>
+                  <div className="grid grid-cols-2 gap-6 items-start">
+                    {/* 左：テキスト */}
+                    <div>
+                      <ol className="space-y-2 text-base text-stone-900 mb-4">
+                        {s.actions.map((item, j) => (
+                          <li key={j}>{item}</li>
+                        ))}
+                      </ol>
+                      <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-stone-50">
+                        <p className="text-base text-stone-900 font-kaisei">「{s.nudge}」</p>
+                      </blockquote>
+                    </div>
+
+                    {/* 右：画像 */}
+                    <div className="w-full border border-stone-200 bg-white">
+                      <img
+                        src="/assets/guide/step/help-sample.png"
+                        alt="操作ガイドの図解サンプル"
+                        className="w-full h-auto object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>,
