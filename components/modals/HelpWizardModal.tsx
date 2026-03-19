@@ -91,19 +91,14 @@ import { getStepsForVariant } from "@/lib/helpSteps";
             {/* メイン：左右分割（A4横比率を意識） */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 p-4 sm:p-6">
-                {/* 左：図解エリア（プレースホルダー） */}
-                <div className="bg-stone-50 rounded-xl border border-stone-200 aspect-4/3 lg:aspect-square flex items-center justify-center overflow-hidden">
-                  <div className="text-center p-6">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 text-3xl">
-                    {displayStep}
-                    </div>
-                    <p className="text-sm text-stone-500">
-                    Step {displayStep}：{currentStep.title}
-                    </p>
-                    <p className="text-xs text-stone-400 mt-2">
-                    （図解は public/assets/guide/step{displayStep}.png で差し替え可能）
-                    </p>
-                  </div>
+                {/* 左：図解エリア（ダミー画像） */}
+                <div className="bg-stone-50 rounded-xl border border-stone-200 aspect-4/3 lg:aspect-square overflow-hidden">
+                  <img
+                    src="/assets/guide/step/help-sample.png"
+                    alt="操作ガイドの図解サンプル"
+                    className="w-full h-full object-contain bg-white"
+                    loading="lazy"
+                  />
                 </div>
 
                 {/* 右：説明文 */}
