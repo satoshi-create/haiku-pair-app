@@ -5,6 +5,8 @@ export interface StepData {
   actions: string[];
   /** 応援の一言 */
   nudge: string;
+  /** 図解画像（public 配下のパス）。未指定時はプレースホルダ */
+  imageSrc?: string;
 }
 
 export type HelpVariant = "session" | "home" | "host-wait" | "join";
@@ -17,6 +19,7 @@ export type HelpVariant = "session" | "home" | "host-wait" | "join";
 export const HOME_STEPS: StepData[] = [
   {
     title: "ホーム",
+    imageSrc: "/assets/guide/step/01_home.png",
     actions: [
       "① お名前を入れてください",
       "　俳句のときに使うお名前です",
@@ -32,6 +35,7 @@ export const HOME_STEPS: StepData[] = [
 export const HOST_WAIT_STEPS: StepData[] = [
   {
     title: "ホスト（座を立てる方）",
+    imageSrc: "/assets/guide/step/02_host_home.png",
     actions: [
       "① 表示された番号（ID）をお相手に伝えます",
       "　またはQRコードを見せます",
@@ -46,6 +50,7 @@ export const HOST_WAIT_STEPS: StepData[] = [
 export const JOIN_STEPS: StepData[] = [
   {
     title: "ゲスト（座に参加する方）",
+    imageSrc: "/assets/guide/step/03_guest_home.png",
     actions: [
       "① 教えてもらった番号を入れます",
       "　またはQRコードを読み取ります",
@@ -162,4 +167,11 @@ export function getStepsForVariant(
     default:
       return role === "guest" ? STEPS_GUEST : STEPS_HOST;
   }
+}
+
+export function getAllStepsForPrint(role: "host" | "guest"): StepData[] {
+  if (role === "host") {
+    return [...HOME_STEPS, ...HOST_WAIT_STEPS, ...STEPS_HOST];
+  }
+  return [...HOME_STEPS, ...JOIN_STEPS, ...STEPS_GUEST];
 }

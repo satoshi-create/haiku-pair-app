@@ -1,11 +1,49 @@
   "use client";
 
-  import { createPortal } from "react-dom";
-import { useCallback } from "react";
-import { Printer, X } from "lucide-react";
+  import { Printer, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
-import type { HelpVariant } from "@/lib/helpSteps";
-import { getStepsForVariant } from "@/lib/helpSteps";
+import type { HelpVariant, StepData } from "@/lib/helpSteps";
+import { getAllStepsForPrint, getStepsForVariant } from "@/lib/helpSteps";
+
+function HelpGuideFigure({
+  step,
+  layout,
+}: {
+  step: StepData;
+  layout: "modal" | "print";
+}) {
+  if (!step.imageSrc) {
+    const label = (
+      <span className="text-stone-500 text-sm text-center px-4">図解は準備中です</span>
+    );
+    if (layout === "modal") {
+      return (
+        <div className="w-full h-full flex items-center justify-center rounded-lg bg-stone-200/70">
+          {label}
+        </div>
+      );
+    }
+    return (
+      <div className="help-wizard-print-placeholder flex items-center justify-center bg-stone-100 rounded-lg border border-dashed border-stone-300">
+        {label}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={step.imageSrc}
+      alt={`${step.title}の操作ガイド`}
+      className={
+        layout === "modal"
+          ? "w-full h-full object-contain bg-stone-200/70 rounded-lg"
+          : "help-wizard-print-img"
+      }
+      loading="eager"
+    />
+  );
+}
 
   interface HelpWizardModalProps {
     show: boolean;
@@ -24,6 +62,7 @@ import { getStepsForVariant } from "@/lib/helpSteps";
     variant = "session",
     syncStep,
   }: HelpWizardModalProps) {
+  const [printMode, setPrintMode] = useState<"current" | "all">("current");
   const steps = getStepsForVariant(variant, role);
   const totalSteps = steps.length;
   // 旧: タイトル文字列（例：ホームの操作ガイド）は使わず、現在の Step と見出しで表示する
@@ -32,6 +71,12 @@ import { getStepsForVariant } from "@/lib/helpSteps";
     syncStep != null && syncStep >= 1 && syncStep <= totalSteps ? syncStep : undefined;
   const displayStep = syncedStep ?? 1;
   const currentStep = steps[displayStep - 1];
+
+  const printSteps = useMemo(() => {
+    if (printMode === "all") return getAllStepsForPrint(role);
+    // 「今の説明を印刷する」＝ 今表示している1ページのみ
+    return [currentStep];
+  }, [currentStep, printMode, role]);
 
     const handlePrint = useCallback(() => {
       document.body.classList.add("help-wizard-print-mode");
@@ -91,14 +136,9 @@ import { getStepsForVariant } from "@/lib/helpSteps";
             {/* メイン：左右分割（A4横比率を意識） */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 p-4 sm:p-6">
-                {/* 左：図解エリア（ダミー画像） */}
+                {/* 左：図解エリア */}
                 <div className="bg-stone-200/70 rounded-xl border border-stone-200 aspect-4/3 lg:aspect-square overflow-hidden p-3">
-                  <img
-                    src="/assets/guide/step/help-sample.png"
-                    alt="操作ガイドの図解サンプル"
-                    className="w-full h-full object-contain bg-stone-200/70 rounded-lg"
-                    loading="eager"
-                  />
+                  <HelpGuideFigure step={currentStep} layout="modal" />
                 </div>
 
                 {/* 右：説明文 */}
@@ -119,15 +159,29 @@ import { getStepsForVariant } from "@/lib/helpSteps";
               </div>
             </div>
 
-            {/* フッター：進捗インジケーター + ナビ + 印刷 */}
-            <div className="shrink-0 border-t border-stone-200 px-4 sm:px-6 py-4 flex items-center justify-end gap-3 no-print">
+            {/* フッター：印刷 */}
+            <div className="shrink-0 border-t border-stone-200 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 no-print">
               <button
                 type="button"
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-800 text-white font-semibold hover:bg-stone-700 transition-colors touch-manipulation"
+                onClick={() => {
+                  setPrintMode("current");
+                  handlePrint();
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 bg-white text-stone-800 font-semibold hover:bg-stone-50 transition-colors touch-manipulation"
               >
                 <Printer className="w-5 h-5" />
-                PDFで保存 / 印刷
+                今の説明を印刷する
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrintMode("all");
+                  handlePrint();
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-stone-800 text-white font-semibold hover:bg-stone-700 transition-colors touch-manipulation"
+              >
+                <Printer className="w-5 h-5" />
+                全部まとめて印刷する
               </button>
             </div>
           </div>
@@ -141,36 +195,52 @@ import { getStepsForVariant } from "@/lib/helpSteps";
               className="help-wizard-print-root hidden"
               aria-hidden="true"
             >
-              {steps.map((s, i) => (
-                <div key={i} className="help-wizard-print-page">
-                  <h2 className="text-2xl font-bold text-stone-900 mb-4 font-kaisei">
-                    【{s.title}】 Step {i + 1} / {totalSteps}
-                  </h2>
-                  <div className="grid grid-cols-2 gap-6 items-start">
-                    {/* 左：テキスト */}
-                    <div>
-                      <ol className="space-y-2 text-base text-stone-900 mb-4">
-                        {s.actions.map((item, j) => (
-                          <li key={j}>{item}</li>
-                        ))}
-                      </ol>
-                      <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-stone-50">
-                        <p className="text-base text-stone-900 font-kaisei">「{s.nudge}」</p>
-                      </blockquote>
-                    </div>
+              {printSteps.map((s, i) => {
+                const stepLine =
+                  printMode === "all"
+                    ? i >= 2
+                      ? `Step ${i - 1} / 5`
+                      : ""
+                    : variant === "session" && totalSteps > 1
+                      ? `Step ${displayStep} / ${totalSteps}`
+                      : "";
 
-                    {/* 右：画像 */}
-                    <div className="w-full border border-stone-200 bg-white">
-                      <img
-                        src="/assets/guide/step/help-sample.png"
-                        alt="操作ガイドの図解サンプル"
-                        className="w-full h-auto object-contain"
-                        loading="lazy"
-                      />
+                return (
+                <div key={i} className="help-wizard-print-page">
+                  <div style={{ breakInside: "avoid" }}>
+                    {stepLine && (
+                      <p className="text-sm font-semibold text-stone-700 mb-1">
+                        {stepLine}
+                      </p>
+                    )}
+                    <h2 className="text-2xl font-bold text-stone-900 mb-4 font-kaisei">
+                      {s.title}
+                    </h2>
+                    <div
+                      className="help-wizard-print-grid grid grid-cols-2 gap-6 items-stretch"
+                      style={{ breakInside: "avoid" }}
+                    >
+                      {/* 左：テキスト */}
+                      <div className="help-wizard-print-text min-w-0">
+                        <ol className="space-y-2 text-base text-stone-900 mb-4">
+                          {s.actions.map((item, j) => (
+                            <li key={j}>{item}</li>
+                          ))}
+                        </ol>
+                        <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-stone-50">
+                          <p className="text-base text-stone-900 font-kaisei">「{s.nudge}」</p>
+                        </blockquote>
+                      </div>
+
+                      {/* 右：画像（印刷時は @media print で高さ・アスペクトを制御） */}
+                      <div className="help-wizard-print-figure min-w-0 flex items-center justify-center bg-white">
+                        <HelpGuideFigure step={s} layout="print" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>,
             document.body
           )}

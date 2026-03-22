@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
 /* ブラウザ共通：パディングによる幅計算ズレ防止、タップ時の青い枠を非表示 */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -27,12 +30,15 @@
   }
 }
 
-html, body {
+html,
+body {
   min-height: 100%;
 }
+
 html {
   overflow-x: hidden;
 }
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -45,49 +51,109 @@ input[type="text"],
 input[type="email"],
 input[type="search"],
 textarea {
-  color: #1c1917; /* stone-900 */
+  color: #1c1917;
+  /* stone-900 */
 }
+
 input::placeholder,
 textarea::placeholder {
-  color: #78716c; /* stone-500 */
+  color: #78716c;
+  /* stone-500 */
 }
 
 /* Haiku app animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
+
 @keyframes shimmer {
-  0% { background-position: -100% 0; }
-  100% { background-position: 100% 0; }
+  0% {
+    background-position: -100% 0;
+  }
+
+  100% {
+    background-position: 100% 0;
+  }
 }
+
 @keyframes breathe {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* ナッジ（声掛けヒント）用：優しく浮き出る＋3秒ごとにポワンと揺れる */
 @keyframes nudgeFadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes nudgeBreathe {
-  0%, 90%, 100% { transform: translateY(0) scale(1); }
-  93% { transform: translateY(-2px) scale(1.01); }
-  96% { transform: translateY(0) scale(1); }
+
+  0%,
+  90%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  93% {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  96% {
+    transform: translateY(0) scale(1);
+  }
 }
 
 .nudge-appear {
   animation: nudgeFadeIn 0.8s ease-out forwards;
 }
+
 .nudge-breathe {
   animation: nudgeBreathe 3s ease-in-out infinite;
   animation-delay: 0.8s;
@@ -97,24 +163,40 @@ textarea::placeholder {
 .fade-in {
   animation: fadeIn 0.5s ease-out;
 }
+
 .slide-in {
   animation: slideIn 0.4s ease-out;
 }
+
 .float {
   animation: float 3s ease-in-out infinite;
 }
+
 .shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
 .breathe {
   animation: breathe 2s ease-in-out infinite;
 }
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
+
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
 
 /* Kaisei 明朝（俳句・ポラロイド用） */
 .font-kaisei {
@@ -242,13 +324,14 @@ textarea::placeholder {
   .print-only {
     display: flex !important;
   }
+
   @page {
     size: 89mm 127mm;
     margin: 0;
   }
 
   /* 印刷時はアプリ UI を非表示（ヘルプ印刷時は body.help-wizard-print-mode で上書きされるため除外） */
-  body:not(.help-wizard-print-mode) > *:not(.polaroid-print-root) {
+  body:not(.help-wizard-print-mode)>*:not(.polaroid-print-root) {
     display: none !important;
   }
 
@@ -287,7 +370,7 @@ textarea::placeholder {
 }
 
 @media print {
-  body.help-wizard-print-mode > *:not(.help-wizard-print-root) {
+  body.help-wizard-print-mode>*:not(.help-wizard-print-root) {
     display: none !important;
   }
 
@@ -308,5 +391,36 @@ textarea::placeholder {
 
   body.help-wizard-print-mode .help-wizard-print-root .help-wizard-print-page:last-child {
     break-after: auto;
+  }
+
+  /* 印刷：左テキスト / 右画像。画像はつぶさずページ内に収める */
+  body.help-wizard-print-mode .help-wizard-print-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6mm !important;
+    align-items: stretch !important;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-figure {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 0 !important;
+    /* A4横 印刷有効高さ(約180mm)からタイトル・余白を差し引いた目安 */
+    max-height: 120mm !important;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-img {
+    max-width: 100% !important;
+    max-height: 120mm !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+
+  body.help-wizard-print-mode .help-wizard-print-placeholder {
+    width: 100% !important;
+    max-height: 120mm !important;
+    min-height: 50mm !important;
   }
 }
