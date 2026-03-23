@@ -68,6 +68,7 @@ export const JOIN_STEPS: StepData[] = [
 /** Step 1 / 5：写真からお題を決める（ホスト） */
 const SESSION_STEP1_HOST: StepData = {
   title: "写真からお題を決める",
+  imageSrc: "/assets/guide/step/step01_host_create-haiku.png",
   actions: [
     "① 季語（きご）を探します",
     "　写真からおすすめが出てきます",
@@ -81,6 +82,7 @@ const SESSION_STEP1_HOST: StepData = {
 /** Step 1 / 5：お題が出るまで待つ（ゲスト） */
 const SESSION_STEP1_GUEST: StepData = {
   title: "お題が出るまで待つ",
+  imageSrc: "/assets/guide/step/step01_guest_create-haiku.png",
   actions: ["① お題が出るまで、少しお待ちください", "② お題が出たら「次へ」を押します"],
   nudge: "もうすぐ句会が始まります。どんな言葉が浮かぶか楽しみですね",
 };
@@ -88,6 +90,7 @@ const SESSION_STEP1_GUEST: StepData = {
 /** Step 2 / 5：句を詠む */
 const SESSION_STEP2: StepData = {
   title: "句を詠む",
+  imageSrc: "/assets/guide/step/step02_create-haiku.png",
   actions: [
     "① 「指で書く」を押します",
     "② ゆっくり俳句を書きます",
@@ -102,6 +105,7 @@ const SESSION_STEP2: StepData = {
 /** Step 3 / 5：AIに相談 */
 const SESSION_STEP3: StepData = {
   title: "AIに相談",
+  imageSrc: "/assets/guide/step/step03_create-haiku.png",
   actions: [
     "① 表示された句を確認します",
     "　間違いがあれば直せます",
@@ -115,6 +119,7 @@ const SESSION_STEP3: StepData = {
 /** Step 4 / 5：提出する */
 const SESSION_STEP4: StepData = {
   title: "提出する",
+  imageSrc: "/assets/guide/step/step04_create-haiku.png",
   actions: [
     "① もう一度ゆっくり読みます",
     "② 気になるところがあれば直します",
@@ -126,6 +131,7 @@ const SESSION_STEP4: StepData = {
 /** Step 5 / 5：披講（鑑賞） */
 const SESSION_STEP5: StepData = {
   title: "披講（鑑賞）",
+  imageSrc: "/assets/guide/step/step05_create-haiku.png",
   actions: [
     "① みんなの句をゆっくり眺めます",
     "② 「句の履歴」から過去の作品も見られます",
