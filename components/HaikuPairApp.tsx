@@ -32,7 +32,8 @@ import type {
     ScreenMode,
     SessionData,
 } from "@/lib/types";
-import { useEffect, useRef, useState } from "react";
+import { getSeasonTheme } from "@/lib/themeUtils";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import GalleryScreen from "@/components/screens/GalleryScreen";
 import HomeScreen from "@/components/screens/HomeScreen";
@@ -43,8 +44,15 @@ import SessionScreen from "@/components/screens/SessionScreen";
 import AISuggestModal from "@/components/modals/AISuggestModal";
 import HaigaModal from "@/components/modals/HaigaModal";
 import ShareCardModal from "@/components/modals/ShareCardModal";
+import SakuraPetals from "@/components/SakuraPetals";
+
+/** 全画面ルートの背景。`globals.css` のテーマ変数（html[data-theme]）に追従する */
+const APP_ROOT_SHELL_CLASS =
+  "h-dvh min-h-dvh overflow-hidden bg-[linear-gradient(180deg,var(--theme-surface)_0%,var(--theme-surface-muted)_55%,var(--theme-gradient-end)_100%)]";
 
 export default function HaikuPairApp() {
+  const seasonTheme = useMemo(() => getSeasonTheme(), []);
+
   // --- ユーザーID読み込み（アプリ起動時に確実にセット） ---
   const [userId, setUserId] = useState<string | null>(null);
   const [userIdLoading, setUserIdLoading] = useState(true);
@@ -1095,6 +1103,7 @@ export default function HaikuPairApp() {
       case "home":
         return (
           <HomeScreen
+            seasonTheme={seasonTheme}
             userName={userName}
             onUserNameChange={setUserName}
             onCreateSession={createSession}
@@ -1194,8 +1203,9 @@ export default function HaikuPairApp() {
   // ユーザーID読み込み中はローディング表示。未確定のままセッション画面へ進まない。
   if (userIdLoading) {
     return (
-      <div className="h-dvh min-h-dvh overflow-hidden bg-linear-to-b from-stone-100 to-amber-50 flex items-center justify-center px-2 sm:px-4">
-        <div className="text-center">
+      <div className={`${APP_ROOT_SHELL_CLASS} relative flex items-center justify-center px-2 sm:px-4`}>
+        {seasonTheme === "sakura" && <SakuraPetals />}
+        <div className="relative z-10 text-center">
           <p className="text-xl sm:text-2xl text-stone-600 animate-pulse">読み込み中…</p>
         </div>
       </div>
@@ -1203,9 +1213,10 @@ export default function HaikuPairApp() {
   }
 
   return (
-    <div className="h-dvh min-h-dvh overflow-hidden bg-linear-to-b from-stone-100 to-amber-50 flex flex-col">
+    <div className={`${APP_ROOT_SHELL_CLASS} relative flex flex-col`}>
+      {seasonTheme === "sakura" && <SakuraPetals />}
       <div
-        className={`flex-1 overflow-y-auto overflow-x-hidden touch-pan-y px-2 sm:px-4 py-4 min-h-0`}
+        className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden touch-pan-y px-2 sm:px-4 py-4 min-h-0"
       >
         <div className="min-h-full flex flex-col items-center justify-center py-8 sm:py-10">
           <div className={`max-w-2xl w-full ${fadeIn ? "fade-in" : "opacity-0"}`}>

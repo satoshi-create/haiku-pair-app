@@ -1,16 +1,16 @@
-import { createPortal } from 'react-dom';
 import FamilyGallery from '@/components/FamilyGallery';
 import HandwritingCanvas from '@/components/HandwritingCanvas';
-import {
-  getCloudinaryUrl,
-  CLOUDINARY_THUMB_WIDTH,
-  CLOUDINARY_ZOOM_WIDTH,
-} from '@/lib/cloudinary';
 import HelpWizardModal from '@/components/modals/HelpWizardModal';
-import { HelpCircle } from 'lucide-react';
 import KigoDictScreen from '@/components/screens/KigoDictScreen';
 import MoraCounter from '@/components/shared/MoraCounter';
+import {
+    CLOUDINARY_THUMB_WIDTH,
+    CLOUDINARY_ZOOM_WIDTH,
+    getCloudinaryUrl,
+} from '@/lib/cloudinary';
+import { HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /** ご家族の句（母_俳句.csv より）。Step 2 で背景のささやきとして表示 */
 const SAMPLE_FAMILY_HAIKU = '苗床に　朝の陽集め　露の網';

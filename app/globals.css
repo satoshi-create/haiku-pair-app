@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../tailwind.config.ts";
 
 /* ブラウザ共通：パディングによる幅計算ズレ防止、タップ時の青い枠を非表示 */
 *,
@@ -14,11 +15,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* 季節テーマ用（既定＝ニュートラル。桜などは html[data-theme] で上書き） */
+  --theme-primary: #d97706;
+  --theme-accent: #57534e;
+  --theme-surface: #ffffff;
+  --theme-surface-muted: #fafaf9;
+  --theme-ring: #fcd34d;
+  /* アプリ全画面ルートのグラデ下端（旧 to-amber-50 に相当） */
+  --theme-gradient-end: #fffbeb;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-surface-muted: var(--theme-surface-muted);
+  --color-theme-ring: var(--theme-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -27,7 +41,76 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --theme-primary: #fbbf24;
+    --theme-accent: #a8a29e;
+    --theme-surface: #0a0a0a;
+    --theme-surface-muted: #1c1917;
+    --theme-ring: #ca8a04;
+    --theme-gradient-end: #292524;
   }
+}
+
+/* ===== 季節限定テーマ：桜（淡い桜色の単色地、若草アクセント） ===== */
+html[data-theme="sakura"] {
+  color-scheme: light;
+  /* 背景は単色（グラデの下端が暗く見えないよう surface 系を同一トーンに） */
+  --background: #fff8fa;
+  --foreground: #1c1917;
+  --theme-primary: #fbcfe8;
+  --theme-accent: #4d7c4a;
+  --theme-surface: #fff8fa;
+  --theme-surface-muted: #fff8fa;
+  --theme-ring: #f9a8d4;
+  --theme-gradient-end: #fff8fa;
+  /* 舞い落ちる花びら用（桜ピンクをやわらかく） */
+  --sakura-petal-color: color-mix(in srgb, var(--theme-ring) 42%, var(--theme-primary) 58%);
+}
+
+/*
+ * 春〜冬：layout が常に data-theme を付与するため、OS ダークの :root だけだと
+ * 変数が真っ暗になる。html[data-theme] でライトトーンを明示し上書きする。
+ * 背景は桜と同様、surface / muted / gradient-end を同一色にして単色に見せる。
+ */
+html[data-theme="spring"],
+html[data-theme="summer"],
+html[data-theme="autumn"],
+html[data-theme="winter"] {
+  color-scheme: light;
+  --foreground: #1c1917;
+  --theme-accent: #57534e;
+  --theme-ring: #fcd34d;
+}
+
+html[data-theme="spring"] {
+  --background: #f6fdf8;
+  --theme-primary: #15803d;
+  --theme-surface: #f6fdf8;
+  --theme-surface-muted: #f6fdf8;
+  --theme-gradient-end: #f6fdf8;
+}
+
+html[data-theme="summer"] {
+  --background: #fffef6;
+  --theme-primary: #ea580c;
+  --theme-surface: #fffef6;
+  --theme-surface-muted: #fffef6;
+  --theme-gradient-end: #fffef6;
+}
+
+html[data-theme="autumn"] {
+  --background: #fffbf5;
+  --theme-primary: #c2410c;
+  --theme-surface: #fffbf5;
+  --theme-surface-muted: #fffbf5;
+  --theme-gradient-end: #fffbf5;
+}
+
+html[data-theme="winter"] {
+  --background: #f8fafc;
+  --theme-primary: #0369a1;
+  --theme-surface: #f8fafc;
+  --theme-surface-muted: #f8fafc;
+  --theme-gradient-end: #f8fafc;
 }
 
 html,
@@ -59,6 +142,50 @@ input::placeholder,
 textarea::placeholder {
   color: #78716c;
   /* stone-500 */
+}
+
+/* 桜テーマ：背景の花びら（低速・低コントラスト） */
+@keyframes sakura-petal-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(var(--sakura-rot-start, 0deg));
+  }
+
+  22% {
+    transform: translate3d(var(--sakura-sway-a, 14px), 24vh, 0) rotate(calc(var(--sakura-rot-start, 0deg) + 85deg));
+  }
+
+  48% {
+    transform: translate3d(var(--sakura-sway-b, -18px), 52vh, 0) rotate(calc(var(--sakura-rot-start, 0deg) + 185deg));
+  }
+
+  72% {
+    transform: translate3d(calc(var(--sakura-sway-a, 14px) * -0.45), 78vh, 0) rotate(calc(var(--sakura-rot-start, 0deg) + 275deg));
+  }
+
+  100% {
+    transform: translate3d(0, 118vh, 0) rotate(calc(var(--sakura-rot-start, 0deg) + 360deg));
+  }
+}
+
+.sakura-petal-item {
+  position: absolute;
+  top: -3rem;
+  z-index: 0;
+  pointer-events: none;
+  color: var(--sakura-petal-color, var(--theme-ring));
+  opacity: 0.34;
+  will-change: transform;
+  animation-name: sakura-petal-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sakura-petal-item {
+    animation: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
 }
 
 /* Haiku app animations */

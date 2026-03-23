@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import HelpWizardModal from "@/components/modals/HelpWizardModal";
-import { HelpCircle } from "lucide-react";
+import type { SeasonThemeName } from "@/lib/themeUtils";
+import { Flower, HelpCircle } from "lucide-react";
+import { useState } from "react";
 
 interface HomeScreenProps {
+  seasonTheme: SeasonThemeName;
   userName: string;
   onUserNameChange: (name: string) => void;
   onCreateSession: () => void;
@@ -13,6 +15,7 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({
+  seasonTheme,
   userName,
   onUserNameChange,
   onCreateSession,
@@ -25,8 +28,22 @@ export default function HomeScreen({
     <div className="relative space-y-6 sm:space-y-8">
       <div className="space-y-2 text-center">
         <div className="inline-flex items-center gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-stone-800">
+          <h1 className="inline-flex items-center justify-center gap-2 text-2xl sm:text-3xl font-bold text-stone-800">
+            {seasonTheme === "sakura" && (
+              <Flower
+                className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-pink-400"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+            )}
             AI句会ワークショップ
+            {seasonTheme === "sakura" && (
+              <Flower
+                className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-pink-400"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+            )}
           </h1>
           <button
             type="button"

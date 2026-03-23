@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Kaisei_Opti } from "next/font/google";
+import { getSeasonTheme } from "@/lib/themeUtils";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -34,8 +35,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const seasonTheme = getSeasonTheme();
   return (
-    <html lang="en">
+    <html lang="en" data-theme={seasonTheme}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${kaiseiOpti.variable} antialiased`}
       >
