@@ -1,4 +1,4 @@
-"use client";
+  "use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,8 @@ interface FamilyGalleryProps {
   onClose: () => void;
 }
 
+type ImageViewMode = "photo" | "haiga";
+
 /** tags を正規化（DBが文字列で返す場合に対応） */
 function normalizeTags(tags: unknown): string[] {
   if (Array.isArray(tags)) return tags.filter((t): t is string => typeof t === "string");
@@ -28,6 +30,33 @@ function normalizeTags(tags: unknown): string[] {
     }
   }
   return [];
+}
+
+function hasImageUrl(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function getInitialImageViewMode(row: FamilyHaikuRow): ImageViewMode {
+  return hasImageUrl(row.haiga_url) ? "haiga" : "photo";
+}
+
+function resolveImageViewMode(
+  row: FamilyHaikuRow,
+  desired: ImageViewMode | undefined,
+): ImageViewMode {
+  const hasPhoto = hasImageUrl(row.image_url);
+  const hasHaiga = hasImageUrl(row.haiga_url);
+  if (desired === "haiga" && hasHaiga) return "haiga";
+  if (desired === "photo" && hasPhoto) return "photo";
+  return hasHaiga ? "haiga" : "photo";
+}
+
+function getDisplayImageUrl(row: FamilyHaikuRow, mode: ImageViewMode): string | null {
+  if (mode === "haiga" && hasImageUrl(row.haiga_url)) return row.haiga_url!;
+  if (mode === "photo" && hasImageUrl(row.image_url)) return row.image_url!;
+  if (hasImageUrl(row.haiga_url)) return row.haiga_url!;
+  if (hasImageUrl(row.image_url)) return row.image_url!;
+  return null;
 }
 
 const INITIAL_BATCH = 4;
@@ -45,6 +74,9 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
   const lastBatchLoadedRef = useRef(false);
+  const [imageViewByRowId, setImageViewByRowId] = useState<
+    Record<string, ImageViewMode>
+  >({});
 
   const handleViewModeChange = useCallback(
     (mode: "list" | "card") => {
@@ -81,7 +113,14 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     let cancelled = false;
     fetchFamilyHaikus()
       .then((data) => {
-        if (!cancelled) setList(data);
+        if (!cancelled) {
+          setList(data);
+          const initialModes: Record<string, ImageViewMode> = {};
+          for (const row of data) {
+            initialModes[row.id] = getInitialImageViewMode(row);
+          }
+          setImageViewByRowId(initialModes);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -141,7 +180,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     )
       return;
     const lastRow = visibleList[visibleList.length - 1];
-    if (lastRow?.image_url) return;
+    if (lastRow && getDisplayImageUrl(lastRow, resolveImageViewMode(lastRow, imageViewByRowId[lastRow.id]))) return;
     const id = window.setTimeout(() => {
       setVisibleCount((prev) => {
         const next = Math.min(prev + BATCH_SIZE, filteredList.length);
@@ -150,7 +189,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       });
     }, BATCH_DELAY_MS);
     return () => clearTimeout(id);
-  }, [viewMode, visibleCount, filteredList.length, visibleList, expandedRow]);
+  }, [viewMode, visibleCount, filteredList.length, visibleList, expandedRow, imageViewByRowId]);
 
   if (loading) {
     return (
@@ -262,13 +301,18 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             ) : (
               filteredList.map((row) => {
                 const tags = normalizeTags(row.tags);
+                const mode = resolveImageViewMode(row, imageViewByRowId[row.id]);
+                const displayImageUrl = getDisplayImageUrl(row, mode);
+                const hasPhoto = hasImageUrl(row.image_url);
+                const hasHaiga = hasImageUrl(row.haiga_url);
+                const showImageSwitcher = hasPhoto && hasHaiga;
                 return (
                   <li
                     key={row.id}
                     className="flex gap-4 p-4 rounded-xl border border-stone-200 bg-stone-50/80"
                   >
                     <div className="shrink-0 w-24 h-24 min-w-[96px] min-h-[96px] rounded-lg overflow-hidden bg-stone-200 relative">
-                      {row.image_url ? (
+                      {displayImageUrl ? (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -279,9 +323,10 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           {(() => {
-                            const imgSrc = getCloudinaryUrl(row.image_url, 400, "gallery");
+                            const imgSrc = getCloudinaryUrl(displayImageUrl, 400, "gallery");
                             if (imgSrc.startsWith("data:")) {
                               return (
+                                // eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応
                                 <img
                                   src={imgSrc}
                                   alt=""
@@ -302,8 +347,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           })()}
                         </button>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-400 text-2xl">
-                          📝
+                        <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 text-sm px-1 text-center leading-tight">
+                          {hasHaiga ? "写真がありません" : "画像がありません"}
                         </div>
                       )}
                     </div>
@@ -326,6 +371,36 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           ))}
                         </div>
                       )}
+                      {showImageSwitcher && (
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setImageViewByRowId((prev) => ({ ...prev, [row.id]: "photo" }))
+                            }
+                            className={`min-h-[44px] px-3 rounded-lg text-sm font-semibold border transition-colors ${
+                              mode === "photo"
+                                ? "bg-stone-800 text-white border-stone-800"
+                                : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                            }`}
+                          >
+                            📷 写真
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setImageViewByRowId((prev) => ({ ...prev, [row.id]: "haiga" }))
+                            }
+                            className={`min-h-[44px] px-3 rounded-lg text-sm font-semibold border transition-colors ${
+                              mode === "haiga"
+                                ? "bg-stone-800 text-white border-stone-800"
+                                : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                            }`}
+                          >
+                            🖌️ 俳画
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </li>
                 );
@@ -343,6 +418,11 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                 const tags = normalizeTags(row.tags);
                 const isLastCard = idx === visibleList.length - 1;
                 const shouldTriggerOnLoad = isLastCard && visibleCount < filteredList.length;
+                const mode = resolveImageViewMode(row, imageViewByRowId[row.id]);
+                const displayImageUrl = getDisplayImageUrl(row, mode);
+                const hasPhoto = hasImageUrl(row.image_url);
+                const hasHaiga = hasImageUrl(row.haiga_url);
+                const showImageSwitcher = hasPhoto && hasHaiga;
                 return (
                   <article
                     key={row.id}
@@ -350,7 +430,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                   >
                     {/* 上部: 写真（正方形・object-cover） */}
                     <div className="aspect-square w-full bg-stone-200 relative">
-                      {row.image_url ? (
+                      {displayImageUrl ? (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -361,7 +441,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           aria-label="画像を拡大"
                         >
                           {(() => {
-                            const imgSrc = getCloudinaryUrl(row.image_url, 400, "gallery");
+                            const imgSrc = getCloudinaryUrl(displayImageUrl, 400, "gallery");
                             if (imgSrc.startsWith("data:")) {
                               return (
                                 // eslint-disable-next-line @next/next/no-img-element -- data: URL は next/image 非対応
@@ -387,11 +467,47 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           })()}
                         </button>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-400 text-5xl">
-                          📝
+                        <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 px-4 text-center">
+                          <p className="text-2xl mb-1">🖼️</p>
+                          <p className="text-lg font-semibold">
+                            {hasHaiga ? "写真がありません" : "画像がありません"}
+                          </p>
+                          {!hasHaiga && <p className="text-base">俳画作成中</p>}
                         </div>
                       )}
                     </div>
+                    {showImageSwitcher && (
+                      <div className="px-4 sm:px-5 pt-4 pb-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setImageViewByRowId((prev) => ({ ...prev, [row.id]: "photo" }))
+                            }
+                            className={`min-h-[48px] rounded-xl text-lg font-semibold border-2 transition-colors ${
+                              mode === "photo"
+                                ? "bg-amber-100 text-amber-900 border-amber-500"
+                                : "bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100"
+                            }`}
+                          >
+                            📷 写真
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setImageViewByRowId((prev) => ({ ...prev, [row.id]: "haiga" }))
+                            }
+                            className={`min-h-[48px] rounded-xl text-lg font-semibold border-2 transition-colors ${
+                              mode === "haiga"
+                                ? "bg-amber-100 text-amber-900 border-amber-500"
+                                : "bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100"
+                            }`}
+                          >
+                            🖌️ 俳画
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* 中央: 俳句 */}
                     <div className="p-6 flex-1">
                       <p className="text-2xl text-stone-800 leading-relaxed font-serif whitespace-pre-wrap mb-4">
@@ -439,8 +555,12 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
         </div>
       </div>
 
-      {/* 画像拡大モーダル：写真＋俳句を表示 */}
-      {expandedRow && expandedRow.image_url && (
+      {/* 画像拡大モーダル：表示中の画像＋俳句を表示 */}
+      {expandedRow &&
+        getDisplayImageUrl(
+          expandedRow,
+          resolveImageViewMode(expandedRow, imageViewByRowId[expandedRow.id]),
+        ) && (
         <div
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setExpandedRow(null)}
@@ -454,7 +574,59 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
-              const imgSrc = getCloudinaryUrl(expandedRow.image_url, CLOUDINARY_ZOOM_WIDTH);
+              const mode = resolveImageViewMode(
+                expandedRow,
+                imageViewByRowId[expandedRow.id],
+              );
+              const hasPhoto = hasImageUrl(expandedRow.image_url);
+              const hasHaiga = hasImageUrl(expandedRow.haiga_url);
+              if (!(hasPhoto && hasHaiga)) return null;
+              return (
+                <div className="w-full max-w-[1200px] flex justify-center">
+                  <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageViewByRowId((prev) => ({
+                          ...prev,
+                          [expandedRow.id]: "photo",
+                        }))
+                      }
+                      className={`min-h-[52px] rounded-xl text-lg font-semibold border-2 transition-colors ${
+                        mode === "photo"
+                          ? "bg-amber-100 text-amber-900 border-amber-500"
+                          : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                      }`}
+                    >
+                      📷 写真
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageViewByRowId((prev) => ({
+                          ...prev,
+                          [expandedRow.id]: "haiga",
+                        }))
+                      }
+                      className={`min-h-[52px] rounded-xl text-lg font-semibold border-2 transition-colors ${
+                        mode === "haiga"
+                          ? "bg-amber-100 text-amber-900 border-amber-500"
+                          : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                      }`}
+                    >
+                      🖌️ 俳画
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+            {(() => {
+              const displayImageUrl = getDisplayImageUrl(
+                expandedRow,
+                resolveImageViewMode(expandedRow, imageViewByRowId[expandedRow.id]),
+              );
+              if (!displayImageUrl) return null;
+              const imgSrc = getCloudinaryUrl(displayImageUrl, CLOUDINARY_ZOOM_WIDTH);
               if (imgSrc.startsWith("data:")) {
                 return (
                   <>
