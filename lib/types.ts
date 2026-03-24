@@ -42,6 +42,12 @@ export interface ImageSuggestions {
   kigo_suggestions: string[];
   scene_description: string;
   haiku_hints: string[];
+  /** 写真から推定した植物名（候補を含む）。先頭が最有力 */
+  identified_plants?: string[];
+  /** 植物同定の確信度 */
+  plant_confidence?: 'high' | 'medium' | 'low';
+  /** 植物と季語・情緒の解説（やさしい語りかけ） */
+  plant_kigo_note?: string;
 }
 
 export interface HaikuLine {

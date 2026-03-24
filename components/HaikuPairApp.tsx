@@ -511,6 +511,9 @@ export default function HaikuPairApp() {
           "音を想像してみましょう",
           "季節の移ろいを感じてみましょう",
         ],
+        identified_plants: [],
+        plant_confidence: "low",
+        plant_kigo_note: "",
       });
     } finally {
       setImageAnalyzing(false);

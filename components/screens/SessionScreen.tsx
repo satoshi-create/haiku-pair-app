@@ -56,6 +56,9 @@ interface SessionScreenProps {
     kigo_suggestions: string[];
     scene_description: string;
     haiku_hints: string[];
+    identified_plants?: string[];
+    plant_confidence?: 'high' | 'medium' | 'low';
+    plant_kigo_note?: string;
   } | null;
   onImageFileSelect: (file: File) => void;
   onResetImageSuggestions: () => void;
@@ -256,6 +259,27 @@ export default function SessionScreen({
               ) : (
                 <>
                   <p className="text-lg sm:text-xl text-stone-700 mb-3 sm:mb-4">写真からこんな季語が提案されました。</p>
+                  {imageSuggestions.identified_plants &&
+                    imageSuggestions.identified_plants.length > 0 && (
+                      <div className="mb-3 sm:mb-4 rounded-xl border border-pink-200 bg-pink-50/80 p-3 sm:p-4">
+                        <p className="text-sm sm:text-base text-stone-700 mb-2">見つかった植物</p>
+                        <div className="flex flex-wrap gap-2">
+                          {imageSuggestions.identified_plants.map((plant, idx) => (
+                            <span
+                              key={`${plant}-${idx}`}
+                              className="inline-flex items-center rounded-full bg-pink-100 text-pink-800 border border-pink-200 px-3 py-1 text-sm sm:text-base font-semibold"
+                            >
+                              {plant}
+                            </span>
+                          ))}
+                        </div>
+                        {imageSuggestions.plant_kigo_note && (
+                          <p className="mt-2 text-sm sm:text-base text-stone-700 leading-relaxed">
+                            {imageSuggestions.plant_kigo_note}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   <p className="text-base sm:text-lg text-stone-700 mb-3 sm:mb-4">{imageSuggestions.scene_description}</p>
                   <p className="text-lg sm:text-xl font-semibold text-stone-800 mb-2 sm:mb-3">
                     提案された季語（{imageSuggestions.season}）からお題を選ぶ：
