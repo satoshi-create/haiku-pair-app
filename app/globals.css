@@ -441,6 +441,13 @@ textarea::placeholder {
   margin: 0;
 }
 
+.polaroid-card__author {
+  font-size: 0.62rem;
+  color: #a8a29e;
+  margin: 4px 0 0;
+  letter-spacing: 0.02em;
+}
+
 /* 印刷時のみ表示（画面では非表示） */
 .print-only {
   display: none !important;

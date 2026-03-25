@@ -11,6 +11,8 @@ export interface PolaroidCardProps {
   haiku: string;
   /** 作成日（ISO 8601 または表示用文字列） */
   date: string;
+  /** 詠み手（profiles / participants 由来の表示名） */
+  authorLabel?: string | null;
   /** 縦書きで表示するか（デフォルト: true） */
   verticalText?: boolean;
   /** 印刷用クラス（L判用スタイル適用） */
@@ -38,6 +40,7 @@ export default function PolaroidCard({
   handwritingImageUrl = null,
   haiku,
   date,
+  authorLabel = null,
   verticalText = true,
   forPrint = false,
 }: PolaroidCardProps) {
@@ -82,6 +85,9 @@ export default function PolaroidCard({
           {haiku.replace(/　/g, "\n")}
         </p>
         <p className="polaroid-card__date">{formatDate(date)}</p>
+        {authorLabel && authorLabel.trim() !== "" && authorLabel !== "—" && (
+          <p className="polaroid-card__author font-kaisei">{authorLabel}</p>
+        )}
         {handwritingImageUrl && (
           <img
             src={handwritingImageUrl}
