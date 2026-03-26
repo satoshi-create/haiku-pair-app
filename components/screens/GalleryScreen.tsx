@@ -10,6 +10,7 @@ import {
     getSeasonBgClass,
 } from "@/lib/haikuHistoryApi";
 import type { HaikuHistoryEntry } from "@/lib/types";
+import { ensureMyUserUuid, getMyUserUuid } from "@/lib/storage";
 import { useEffect, useMemo, useState } from "react";
 import PolaroidCard from "@/components/PolaroidCard";
 
@@ -109,20 +110,21 @@ export default function GalleryScreen({
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 
-  /** 印刷モーダルを開くたびに落款表示をリセット */
-  useEffect(() => {
-    if (!printEntry) return;
+  const openPrintModal = (entry: HaikuHistoryEntry) => {
     setShowHandwritingInPrint(false);
-  }, [printEntry?.id]);
+    setPrintEntry(entry);
+  };
 
   useEffect(() => {
     let cancelled = false;
     const base = history.map(normalizeEntry);
     const clientKey =
       typeof window !== "undefined" ? localStorage.getItem("client_key") : null;
-    const promise = clientKey
-      ? fetchHaikuHistory(clientKey)
-      : Promise.resolve([]);
+    const userId = typeof window !== "undefined" ? (getMyUserUuid() ?? ensureMyUserUuid()) : null;
+    const promise =
+      clientKey || userId
+        ? fetchHaikuHistory({ clientKey, userId })
+        : Promise.resolve([]);
     queueMicrotask(() => {
       if (!cancelled) setLoading(true);
     });
@@ -336,7 +338,7 @@ export default function GalleryScreen({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPrintEntry(entry)}
+                        onClick={() => openPrintModal(entry)}
                         className="text-sm bg-sky-100 text-sky-800 px-3 py-1.5 rounded-lg hover:bg-sky-200 min-h-[36px]"
                         title="L判で印刷"
                       >
@@ -436,7 +438,7 @@ export default function GalleryScreen({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setPrintEntry(entry)}
+                          onClick={() => openPrintModal(entry)}
                           className="min-h-[44px] text-lg bg-sky-100 text-sky-900 px-5 py-2.5 rounded-xl hover:bg-sky-200 font-semibold transition-colors"
                         >
                           🖨️ L判で印刷

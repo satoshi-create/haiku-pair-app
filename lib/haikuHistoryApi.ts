@@ -12,6 +12,11 @@ type DbHaiku = {
   profiles: { display_name: string | null } | null;
 };
 
+export type HaikuHistoryIdentity = {
+  clientKey?: string | null;
+  userId?: string | null;
+};
+
 /** 季節に応じたプレースホルダー背景色クラス */
 function getSeasonBgClass(season: string): string {
   const s = season?.toLowerCase() ?? "";
@@ -40,18 +45,58 @@ function normalizeTags(tags: unknown): string[] {
 
 /**
  * 参加した座の俳句履歴を Supabase から取得（自分＋相手の句を含む）。
- * client_key で自分の participants を特定し、その session_id に紐づく全俳句を返す。
+ * client_key / user_id のどちらかで自分の participants を特定し、その session_id に紐づく全俳句を返す。
+ *
+ * 優先: サーバーAPI（service role があれば RLS を回避）→ フォールバック: クライアント（anon key）。
  */
-export async function fetchHaikuHistory(clientKey: string): Promise<HaikuHistoryEntry[]> {
-  if (!clientKey) return [];
+export async function fetchHaikuHistory(
+  identity: HaikuHistoryIdentity,
+): Promise<HaikuHistoryEntry[]> {
+  const clientKey = identity.clientKey?.trim() || "";
+  const userId = identity.userId?.trim() || "";
+  if (!clientKey && !userId) return [];
 
   try {
-    const { data: myParticipants } = await supabase
-      .from("participants")
-      .select("session_id")
-      .eq("client_key", clientKey);
+    // まずはサーバーAPIを試す（存在しない/失敗したらクライアント直叩きへフォールバック）
+    try {
+      if (typeof window !== "undefined") {
+        const res = await fetch("/api/haiku-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clientKey: clientKey || null, userId: userId || null }),
+        });
+        if (res.ok) {
+          const payload = (await res.json()) as { entries?: HaikuHistoryEntry[] };
+          if (Array.isArray(payload.entries)) return payload.entries;
+        }
+      }
+    } catch {
+      // ignore
+    }
 
-    const sessionIds = [...new Set((myParticipants ?? []).map((p) => p.session_id).filter(Boolean))];
+    const sessionIdSet = new Set<string>();
+
+    if (clientKey) {
+      const { data: byClientKey } = await supabase
+        .from("participants")
+        .select("session_id")
+        .eq("client_key", clientKey);
+      for (const p of byClientKey ?? []) {
+        if (p?.session_id) sessionIdSet.add(p.session_id);
+      }
+    }
+
+    if (userId) {
+      const { data: byUserId } = await supabase
+        .from("participants")
+        .select("session_id")
+        .eq("user_id", userId);
+      for (const p of byUserId ?? []) {
+        if (p?.session_id) sessionIdSet.add(p.session_id);
+      }
+    }
+
+    const sessionIds = Array.from(sessionIdSet);
     if (sessionIds.length === 0) return [];
 
     const { data, error } = await supabase

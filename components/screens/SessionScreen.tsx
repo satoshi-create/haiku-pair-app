@@ -9,7 +9,7 @@ import {
     getCloudinaryUrl,
 } from '@/lib/cloudinary';
 import { HelpCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /** ご家族の句（母_俳句.csv より）。Step 2 で背景のささやきとして表示 */
@@ -148,13 +148,6 @@ export default function SessionScreen({
   const [showHandwritingCanvas, setShowHandwritingCanvas] = useState(false);
   /** Step 3: AI提案アコーディオンの開閉（デフォルトは閉じた状態） */
   const [aiSuggestionsOpen, setAiSuggestionsOpen] = useState(false);
-
-  /** 新しいAI提案が来たらアコーディオンを閉じる */
-  useEffect(() => {
-    if (hasAiSuggestions && aiSuggestions.length > 0) {
-      setAiSuggestionsOpen(false);
-    }
-  }, [aiSuggestions, hasAiSuggestions]);
 
   const stepLabel = (step: 1 | 2 | 3 | 4 | 5) => {
     if (step === 1 && role === 'guest') return 'ホストのお題を待つ';

@@ -68,6 +68,17 @@ export default function HaikuPairApp() {
       }
       setUserId(uuid);
 
+      // client_key（座席管理用）も常に存在保証しておく（履歴復元・参加時の安定化）
+      try {
+        const existingClientKey =
+          typeof window !== "undefined" ? localStorage.getItem("client_key") : null;
+        if (typeof window !== "undefined" && (!existingClientKey || existingClientKey.trim() === "")) {
+          localStorage.setItem("client_key", crypto.randomUUID());
+        }
+      } catch {
+        // ignore
+      }
+
       // profiles テーブルに存在保証（Upsert）。完了してからローディング解除
       const displayName = getDisplayName() ?? "";
       try {
