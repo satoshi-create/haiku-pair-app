@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   getCloudinaryUrl,
   CLOUDINARY_ZOOM_WIDTH,
@@ -11,6 +12,7 @@ import {
   formatOriginDate,
   type FamilyHaikuRow,
 } from "@/lib/familyHaikusApi";
+import PolaroidCard from "@/components/PolaroidCard";
 
 interface FamilyGalleryProps {
   onClose: () => void;
@@ -77,6 +79,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   const [imageViewByRowId, setImageViewByRowId] = useState<
     Record<string, ImageViewMode>
   >({});
+  const [printRow, setPrintRow] = useState<FamilyHaikuRow | null>(null);
+  const [printImageMode, setPrintImageMode] = useState<ImageViewMode>("photo");
 
   const handleViewModeChange = useCallback(
     (mode: "list" | "card") => {
@@ -108,6 +112,11 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
     };
   }, []);
+
+  const openPrintModal = useCallback((row: FamilyHaikuRow) => {
+    setPrintRow(row);
+    setPrintImageMode(resolveImageViewMode(row, imageViewByRowId[row.id]));
+  }, [imageViewByRowId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,6 +410,15 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           </button>
                         </div>
                       )}
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => openPrintModal(row)}
+                          className="min-h-[44px] px-4 rounded-xl text-sm font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200 transition-colors"
+                        >
+                          🖨️ ポラロイド印刷
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );
@@ -531,6 +549,13 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                           ))}
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => openPrintModal(row)}
+                        className="min-h-[44px] px-4 rounded-xl text-sm font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200 transition-colors"
+                      >
+                        🖨️ ポラロイド印刷
+                      </button>
                     </div>
                   </article>
                 );
@@ -681,6 +706,78 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
           </div>
         </div>
       )}
+
+      {/* ポラロイド印刷モーダル（写真/俳画切替） */}
+      {printRow &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="polaroid-print-root fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-6 overflow-hidden">
+            <div className="no-print fixed inset-0" onClick={() => setPrintRow(null)} aria-hidden />
+            <div
+              className="relative z-10 flex flex-col items-center gap-6 max-w-[89mm] w-full py-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full shrink-0">
+                <PolaroidCard
+                  imageUrl={getDisplayImageUrl(printRow, printImageMode)}
+                  haiku={printRow.haiku_text ?? ""}
+                  date={printRow.origin_date ?? new Date().toISOString()}
+                  forPrint={false}
+                />
+              </div>
+              {(hasImageUrl(printRow.image_url) || hasImageUrl(printRow.haiga_url)) && (
+                <div className="no-print w-full max-w-[89mm] rounded-2xl bg-white/95 border border-stone-200 p-4 shadow-lg">
+                  <p className="text-center text-base font-semibold text-stone-800 mb-3">
+                    印刷する画像
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPrintImageMode("photo")}
+                      disabled={!hasImageUrl(printRow.image_url)}
+                      className={`min-h-[52px] rounded-xl text-base sm:text-lg font-bold border-2 transition-colors touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed ${
+                        printImageMode === "photo"
+                          ? "bg-stone-800 text-white border-stone-800"
+                          : "bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200"
+                      }`}
+                    >
+                      📷 写真
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintImageMode("haiga")}
+                      disabled={!hasImageUrl(printRow.haiga_url)}
+                      className={`min-h-[52px] rounded-xl text-base sm:text-lg font-bold border-2 transition-colors touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed ${
+                        printImageMode === "haiga"
+                          ? "bg-amber-600 text-white border-amber-600"
+                          : "bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200"
+                      }`}
+                    >
+                      🖌️ 俳画
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="no-print flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="min-h-[44px] px-6 py-3 text-lg font-bold bg-stone-800 text-white rounded-xl hover:bg-stone-700"
+                >
+                  🖨️ 印刷する
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintRow(null)}
+                  className="min-h-[44px] px-6 py-3 text-lg font-semibold bg-stone-200 text-stone-800 rounded-xl hover:bg-stone-300"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
