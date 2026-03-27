@@ -770,25 +770,76 @@ export default function HaikuPairApp() {
         alert("セッションが見つかりません");
         return;
       } else {
-        // 満席チェック：guest がすでに存在するか確認
-        const { data: existingGuest, error: guestCheckError } = await supabase
+        const enterGuestSession = (participantId: string | null) => {
+          if (participantId) setMyParticipantId(participantId);
+          setDbSessionId(session.id);
+          setSessionId(id);
+          setKigo(session.kigo ?? "");
+          setSeason(session.season ?? "");
+          if (session.shared_image != null) {
+            setSharedImageDataUrl(session.shared_image || null);
+          }
+          if (session.shared_hints != null) {
+            try {
+              setImageSuggestions(JSON.parse(session.shared_hints) as ImageSuggestions);
+            } catch {
+              // ignore
+            }
+          }
+          setRole("guest");
+          setMode("session");
+          setActiveStep(1);
+          const guestSessionData: SessionData = {
+            id: session.code,
+            kigo: session.kigo ?? "",
+            season: session.season ?? "",
+            host: "",
+            hostHaiku: "",
+            guestHaiku: "",
+            created: (session as { created_at?: string }).created_at ?? new Date().toISOString(),
+          };
+          setSessionData(guestSessionData);
+          saveSession(id, guestSessionData);
+        };
+
+        // 1) 再入室判定: 自分がすでにこの session にいれば満席判定をスキップ
+        const { data: myExistingParticipant, error: myParticipantError } = await supabase
           .from("participants")
           .select("id")
           .eq("session_id", session.id)
-          .eq("role", "guest")
+          .eq("user_id", freshUserId)
           .maybeSingle();
 
-        if (guestCheckError) {
+        if (myParticipantError) {
           console.error(
-            "[Supabase] guest check failed:",
-            guestCheckError.message,
+            "[Supabase] re-entry check failed:",
+            myParticipantError.message,
           );
-        } else if (existingGuest) {
+        } else if (myExistingParticipant) {
+          enterGuestSession(myExistingParticipant.id);
+          return;
+        }
+
+        // 2) 満席判定: 有効な「他人 guest」のみカウント（空name/null user_id/自分を除外）
+        const { count: validOtherGuestCount, error: guestCountError } = await supabase
+          .from("participants")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", session.id)
+          .eq("role", "guest")
+          .not("name", "is", null)
+          .neq("name", "")
+          .not("user_id", "is", null)
+          .neq("user_id", freshUserId);
+
+        if (guestCountError) {
+          console.error(
+            "[Supabase] guest count failed:",
+            guestCountError.message,
+          );
+        } else if ((validOtherGuestCount ?? 0) >= 1) {
           alert("満席です");
           return;
         } else {
-          setDbSessionId(session.id);
-
           // guest を insert。user_id は常に localStorage から取得
           const clientKey = ensureClientKey() ?? crypto.randomUUID();
           const participantUserId = getMyUserUuid() ?? freshUserId;
@@ -812,35 +863,8 @@ export default function HaikuPairApp() {
               "[Supabase] participants insert failed:",
               participantError.message,
             );
-          } else if (insertedParticipant) {
-            setMyParticipantId(insertedParticipant.id);
           }
-          setSessionId(id);
-          setKigo(session.kigo ?? "");
-          setSeason(session.season ?? "");
-          if (session.shared_image != null)
-            setSharedImageDataUrl(session.shared_image || null);
-          if (session.shared_hints != null) {
-            try {
-              setImageSuggestions(JSON.parse(session.shared_hints) as ImageSuggestions);
-            } catch {
-              // ignore
-            }
-          }
-          setRole("guest");
-          setMode("session");
-          setActiveStep(1);
-          const guestSessionData: SessionData = {
-            id: session.code,
-            kigo: session.kigo ?? "",
-            season: session.season ?? "",
-            host: "",
-            hostHaiku: "",
-            guestHaiku: "",
-            created: (session as { created_at?: string }).created_at ?? new Date().toISOString(),
-          };
-          setSessionData(guestSessionData);
-          saveSession(id, guestSessionData);
+          enterGuestSession(insertedParticipant?.id ?? null);
           return;
         }
       }
