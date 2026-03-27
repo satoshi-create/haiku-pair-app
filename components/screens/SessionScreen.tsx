@@ -685,58 +685,62 @@ export default function SessionScreen({
         </div>
       </div>
 
-      {/* 拡大表示モーダル：写真＋ヒント全文 */}
-      {showEnlargedPhoto && (sharedImageDataUrl || imageSuggestions) && (
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-40"
-          onClick={() => setShowEnlargedPhoto(false)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Escape' && setShowEnlargedPhoto(false)}
-          aria-label="閉じる"
-        >
+      {/* 拡大表示モーダル：写真＋ヒント全文（Portalで最前面表示） */}
+      {showEnlargedPhoto &&
+        (sharedImageDataUrl || imageSuggestions) &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            className="w-[95vw] max-w-[1200px] max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-stone-200"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-60"
+            onClick={() => setShowEnlargedPhoto(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Escape' && setShowEnlargedPhoto(false)}
+            aria-label="閉じる"
           >
-            {sharedImageDataUrl && (
-              <div className="p-3 border-b border-stone-200">
-                <img
-                  src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_ZOOM_WIDTH)}
-                  alt="お題の写真"
-                  loading="lazy"
-                  className="w-full max-h-[50vh] object-contain rounded-lg"
-                />
+            <div
+              className="w-[95vw] max-w-[1200px] max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-stone-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {sharedImageDataUrl && (
+                <div className="p-3 border-b border-stone-200">
+                  <img
+                    src={getCloudinaryUrl(sharedImageDataUrl, CLOUDINARY_ZOOM_WIDTH)}
+                    alt="お題の写真"
+                    loading="lazy"
+                    className="w-full max-h-[50vh] object-contain rounded-lg"
+                  />
+                </div>
+              )}
+              {imageSuggestions && (
+                <div className="p-4 text-stone-800">
+                  <p className="text-lg font-semibold mb-2">作句のヒント</p>
+                  <p className="text-base text-stone-700 mb-3">{imageSuggestions.scene_description}</p>
+                  {imageSuggestions.haiku_hints.length > 0 && (
+                    <>
+                      <p className="text-sm font-semibold text-stone-700 mb-1">AIからの視点</p>
+                      <ul className="list-disc pl-5 space-y-1 text-base text-stone-700">
+                        {imageSuggestions.haiku_hints.map((h, idx) => (
+                          <li key={idx}>{h}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="p-4 pt-0">
+                <button
+                  type="button"
+                  onClick={() => setShowEnlargedPhoto(false)}
+                  className="w-full py-4 text-xl font-bold text-stone-800 bg-stone-200 hover:bg-stone-300 rounded-xl transition-colors"
+                >
+                  閉じる
+                </button>
               </div>
-            )}
-            {imageSuggestions && (
-              <div className="p-4 text-stone-800">
-                <p className="text-lg font-semibold mb-2">作句のヒント</p>
-                <p className="text-base text-stone-700 mb-3">{imageSuggestions.scene_description}</p>
-                {imageSuggestions.haiku_hints.length > 0 && (
-                  <>
-                    <p className="text-sm font-semibold text-stone-700 mb-1">AIからの視点</p>
-                    <ul className="list-disc pl-5 space-y-1 text-base text-stone-700">
-                      {imageSuggestions.haiku_hints.map((h, idx) => (
-                        <li key={idx}>{h}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            )}
-            <div className="p-4 pt-0">
-              <button
-                type="button"
-                onClick={() => setShowEnlargedPhoto(false)}
-                className="w-full py-4 text-xl font-bold text-stone-800 bg-stone-200 hover:bg-stone-300 rounded-xl transition-colors"
-              >
-                閉じる
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* 季語辞典オーバーレイ */}
       {showKigoDict && (
