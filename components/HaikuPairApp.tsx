@@ -142,6 +142,12 @@ export default function HaikuPairApp() {
   const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [hostViewingKigoDict, setHostViewingKigoDict] = useState(false);
+  /** DB未作成のセッション下書き。季語確定時に初めてDBへ保存する */
+  const [draftSession, setDraftSession] = useState<{
+    code: string;
+    hostName: string;
+    created: string;
+  } | null>(null);
 
   // --- 句の履歴 ---
   const [haikuHistory, setHaikuHistory] = useState<HaikuHistoryEntry[]>([]);
@@ -605,6 +611,76 @@ export default function HaikuPairApp() {
     }
   };
 
+  const finalizeSessionCreation = async (
+    kigoVal: string,
+    seasonVal: string,
+  ): Promise<{ dbSessionId: string; participantId: string } | null> => {
+    if (!draftSession) return null;
+    const uuid = await ensureUserIdAndProfile();
+    if (!uuid) {
+      alert("ユーザー情報の読み込みに失敗しました。ページを再読み込みしてください。");
+      return null;
+    }
+
+    let createdSessionId: string | null = null;
+    try {
+      const { data: createdSession, error: sessionError } = await supabase
+        .from("sessions")
+        .insert({
+          code: draftSession.code,
+          kigo: kigoVal,
+          season: seasonVal,
+          ...(sharedImageDataUrl && imageSuggestions
+            ? {
+                shared_image: sharedImageDataUrl,
+                shared_hints: JSON.stringify(imageSuggestions),
+              }
+            : {}),
+        })
+        .select("id")
+        .single();
+
+      if (sessionError || !createdSession) {
+        console.error("[Supabase] finalize sessions insert failed:", sessionError?.message);
+        alert("セッション作成に失敗しました。時間をおいてもう一度お試しください。");
+        return null;
+      }
+      createdSessionId = createdSession.id;
+
+      const clientKey = ensureClientKey() ?? crypto.randomUUID();
+      const { data: createdParticipant, error: participantError } = await supabase
+        .from("participants")
+        .insert({
+          session_id: createdSession.id,
+          name: draftSession.hostName,
+          role: "host",
+          client_key: clientKey,
+          user_id: uuid,
+        })
+        .select("id")
+        .single();
+
+      if (participantError || !createdParticipant) {
+        console.error(
+          "[Supabase] finalize participants insert failed:",
+          participantError?.message,
+        );
+        await supabase.from("sessions").delete().eq("id", createdSession.id);
+        alert("参加者登録に失敗しました。もう一度お試しください。");
+        return null;
+      }
+
+      return { dbSessionId: createdSession.id, participantId: createdParticipant.id };
+    } catch (e) {
+      console.error("[Supabase] finalizeSessionCreation:", e);
+      if (createdSessionId) {
+        await supabase.from("sessions").delete().eq("id", createdSessionId);
+      }
+      alert("セッション作成中にエラーが発生しました。再度お試しください。");
+      return null;
+    }
+  };
+
   // --- お題の同期（ホストが季語を決定したときに呼ぶ） ---
   const updateSessionKigo = async (kigoVal: string, seasonVal: string) => {
     setKigo(kigoVal);
@@ -622,6 +698,16 @@ export default function HaikuPairApp() {
       setSessionData(updated);
       saveSession(sessionId, updated);
     }
+    // ホスト初回確定時はここで初めて DB に sessions / participants を作る
+    if (role === "host" && !dbSessionId) {
+      const finalized = await finalizeSessionCreation(kigoVal, seasonVal);
+      if (!finalized) return;
+      setDbSessionId(finalized.dbSessionId);
+      setMyParticipantId(finalized.participantId);
+      setDraftSession(null);
+      return;
+    }
+
     if (!dbSessionId) return;
     try {
       const dbPayload: Record<string, unknown> = {
@@ -655,19 +741,18 @@ export default function HaikuPairApp() {
       alert("お名前を入力してください。");
       return;
     }
-    const uuid = await ensureUserIdAndProfile();
-    if (!uuid) {
-      alert("ユーザー情報の読み込みに失敗しました。ページを再読み込みしてください。");
-      return;
-    }
-
+    // DB作成は行わず、ローカルの作成中状態だけ作る
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const created = new Date().toISOString();
 
     setSessionId(id);
     setKigo("");
     setSeason("");
     setRole("host");
     setMode("host");
+    setDbSessionId(null);
+    setMyParticipantId(null);
+    setDraftSession({ code: id, hostName: userName.trim(), created });
 
     const data: SessionData = {
       id,
@@ -676,63 +761,10 @@ export default function HaikuPairApp() {
       host: userName,
       hostHaiku: "",
       guestHaiku: "",
-      created: new Date().toISOString(),
+      created,
     };
     setSessionData(data);
     saveSession(id, data);
-
-    // Supabase に保存（失敗してもUIは壊さない）
-    try {
-      const { data: createdSession, error: sessionError } = await supabase
-        .from("sessions")
-        .insert({
-          code: id,
-          kigo: "",
-          season: "",
-        })
-        .select("id")
-        .single();
-
-      if (sessionError) {
-        console.error(
-          "[Supabase] sessions insert failed:",
-          sessionError.message,
-        );
-        return;
-      }
-
-      setDbSessionId(createdSession.id);
-
-      // client_key の生成・取得（user_id と別物。座席管理用）
-      const clientKey = ensureClientKey() ?? crypto.randomUUID();
-
-      // participants に host を insert。user_id は常に localStorage から取得
-      const hostUserId = getMyUserUuid() ?? uuid;
-      console.log("[Debug] participants insert 直前 (host) - my_user_uuid:", hostUserId);
-      const { data: createdParticipant, error: participantError } =
-        await supabase
-          .from("participants")
-          .insert({
-            session_id: createdSession.id,
-            name: userName,
-            role: "host",
-            client_key: clientKey,
-            ...(hostUserId && { user_id: hostUserId }),
-          })
-          .select("id")
-          .single();
-
-      if (participantError) {
-        console.error(
-          "[Supabase] participants insert failed:",
-          participantError.message,
-        );
-      } else if (createdParticipant) {
-        setMyParticipantId(createdParticipant.id);
-      }
-    } catch (e) {
-      console.error("[Supabase] unexpected error:", e);
-    }
   };
 
   const joinSession = async (id: string) => {
@@ -1120,6 +1152,7 @@ export default function HaikuPairApp() {
     setShowVoteResult(false);
     setDbSessionId(null);
     setMyParticipantId(null);
+    setDraftSession(null);
     setHasVoted(false);
     setActiveStep(1);
     setHostViewingKigoDict(false);
