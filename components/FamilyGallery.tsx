@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { toPng } from "html-to-image";
 import {
   getCloudinaryUrl,
   CLOUDINARY_ZOOM_WIDTH,
@@ -81,6 +82,8 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
   >({});
   const [printRow, setPrintRow] = useState<FamilyHaikuRow | null>(null);
   const [printImageMode, setPrintImageMode] = useState<ImageViewMode>("photo");
+  const [isSavingPng, setIsSavingPng] = useState(false);
+  const printCardRef = useRef<HTMLDivElement | null>(null);
 
   const handleViewModeChange = useCallback(
     (mode: "list" | "card") => {
@@ -117,6 +120,29 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
     setPrintRow(row);
     setPrintImageMode(resolveImageViewMode(row, imageViewByRowId[row.id]));
   }, [imageViewByRowId]);
+
+  const savePrintAsPng = useCallback(async () => {
+    if (!printRow || !printCardRef.current) return;
+    setIsSavingPng(true);
+    try {
+      const dataUrl = await toPng(printCardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      const safeDate = (printRow.origin_date ?? "").slice(0, 10) || "family";
+      a.download = `family-polaroid-${safeDate}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      console.error("[FamilyGallery] PNG save failed:", e);
+      alert("PNGの保存に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsSavingPng(false);
+    }
+  }, [printRow]);
 
   useEffect(() => {
     let cancelled = false;
@@ -717,7 +743,7 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
               className="relative z-10 flex flex-col items-center gap-6 max-w-[89mm] w-full py-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-full shrink-0">
+              <div ref={printCardRef} className="w-full shrink-0">
                 <PolaroidCard
                   imageUrl={getDisplayImageUrl(printRow, printImageMode)}
                   haiku={printRow.haiku_text ?? ""}
@@ -765,6 +791,14 @@ export default function FamilyGallery({ onClose }: FamilyGalleryProps) {
                   className="min-h-[44px] px-6 py-3 text-lg font-bold bg-stone-800 text-white rounded-xl hover:bg-stone-700"
                 >
                   🖨️ 印刷する
+                </button>
+                <button
+                  type="button"
+                  onClick={savePrintAsPng}
+                  disabled={isSavingPng}
+                  className="min-h-[44px] px-6 py-3 text-lg font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingPng ? "保存中…" : "🖼️ PNGで保存"}
                 </button>
                 <button
                   type="button"

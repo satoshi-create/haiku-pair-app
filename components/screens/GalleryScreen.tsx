@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { toPng } from "html-to-image";
 import {
   getCloudinaryUrl,
   CLOUDINARY_ZOOM_WIDTH,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/haikuHistoryApi";
 import type { HaikuHistoryEntry } from "@/lib/types";
 import { ensureMyUserUuid, getMyUserUuid } from "@/lib/storage";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PolaroidCard from "@/components/PolaroidCard";
 
 type ViewMode = "card" | "list";
@@ -109,10 +110,35 @@ export default function GalleryScreen({
   const [showHandwritingInPrint, setShowHandwritingInPrint] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [isSavingPng, setIsSavingPng] = useState(false);
+  const printCardRef = useRef<HTMLDivElement | null>(null);
 
   const openPrintModal = (entry: HaikuHistoryEntry) => {
     setShowHandwritingInPrint(false);
     setPrintEntry(entry);
+  };
+
+  const savePrintAsPng = async () => {
+    if (!printCardRef.current || !effectivePrintEntry) return;
+    setIsSavingPng(true);
+    try {
+      const dataUrl = await toPng(printCardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      const safeDate = effectivePrintEntry.date?.slice(0, 10) ?? "haiku";
+      a.download = `haiku-polaroid-${safeDate}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      console.error("[GalleryScreen] PNG save failed:", e);
+      alert("PNGの保存に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsSavingPng(false);
+    }
   };
 
   useEffect(() => {
@@ -486,7 +512,7 @@ export default function GalleryScreen({
               onClick={(e) => e.stopPropagation()}
             >
               {/* ポラロイドUI（落款は右下に収まる） */}
-              <div className="w-full shrink-0">
+              <div ref={printCardRef} className="w-full shrink-0">
                 <PolaroidCard
                   imageUrl={effectivePrintEntry.image_url ?? null}
                   handwritingImageUrl={
@@ -537,6 +563,14 @@ export default function GalleryScreen({
                   className="min-h-[44px] px-6 py-3 text-lg font-bold bg-stone-800 text-white rounded-xl hover:bg-stone-700"
                 >
                   🖨️ 印刷する
+                </button>
+                <button
+                  type="button"
+                  onClick={savePrintAsPng}
+                  disabled={isSavingPng}
+                  className="min-h-[44px] px-6 py-3 text-lg font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingPng ? "保存中…" : "🖼️ PNGで保存"}
                 </button>
                 <button
                   type="button"
