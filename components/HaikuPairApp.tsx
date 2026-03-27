@@ -53,47 +53,15 @@ const APP_ROOT_SHELL_CLASS =
 export default function HaikuPairApp() {
   const seasonTheme = useMemo(() => getSeasonTheme(), []);
 
-  // --- ユーザーID読み込み（アプリ起動時に確実にセット） ---
+  // --- ユーザーID読み込み（見るだけでは生成/DB登録しない） ---
   const [userId, setUserId] = useState<string | null>(null);
   const [userIdLoading, setUserIdLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    const init = async () => {
-      const uuid = ensureMyUserUuid();
-      console.log("[Debug] App startup - my_user_uuid:", uuid);
-      if (!uuid) {
-        setUserIdLoading(false);
-        return;
-      }
-      setUserId(uuid);
-
-      // client_key（座席管理用）も常に存在保証しておく（履歴復元・参加時の安定化）
-      try {
-        const existingClientKey =
-          typeof window !== "undefined" ? localStorage.getItem("client_key") : null;
-        if (typeof window !== "undefined" && (!existingClientKey || existingClientKey.trim() === "")) {
-          localStorage.setItem("client_key", crypto.randomUUID());
-        }
-      } catch {
-        // ignore
-      }
-
-      // profiles テーブルに存在保証（Upsert）。完了してからローディング解除
-      const displayName = getDisplayName() ?? "";
-      try {
-        const { error } = await supabase
-          .from("profiles")
-          .upsert(
-            { id: uuid, display_name: displayName },
-            { onConflict: "id" },
-          );
-        if (error) {
-          console.warn("[profiles] upsert failed:", error.message);
-        }
-      } catch (e) {
-        console.warn("[profiles] upsert error:", e);
-      }
+    const init = () => {
+      const existing = getMyUserUuid();
+      if (existing) setUserId(existing);
       if (!cancelled) setUserIdLoading(false);
     };
     init();
@@ -102,19 +70,51 @@ export default function HaikuPairApp() {
     };
   }, []);
 
+  const ensureUserIdAndProfile = async (): Promise<string | null> => {
+    const uuid = ensureMyUserUuid();
+    if (!uuid) return null;
+    setUserId(uuid);
+
+    // profiles は「座を立てる/参加する」の直前にだけ登録する
+    const displayName = getDisplayName() ?? "";
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({ id: uuid, display_name: displayName }, { onConflict: "id" });
+      if (error) console.warn("[profiles] upsert failed:", error.message);
+    } catch (e) {
+      console.warn("[profiles] upsert error:", e);
+    }
+    return uuid;
+  };
+
+  const ensureClientKey = (): string | null => {
+    try {
+      const existing = localStorage.getItem("client_key");
+      if (existing && existing.trim() !== "") return existing;
+      const created = crypto.randomUUID();
+      localStorage.setItem("client_key", created);
+      return created;
+    } catch {
+      return null;
+    }
+  };
+
   // --- 画面モード ---
   const [mode, setMode] = useState<ScreenMode>("home");
+  const [pendingJoinSession, setPendingJoinSession] = useState<string>("");
 
   // --- QRリンク（?session=XXX）の自動参加 ---
   const autoJoinAttemptedRef = useRef(false);
   useEffect(() => {
     if (userIdLoading || mode !== "home" || autoJoinAttemptedRef.current) return;
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    const sessionParam = params?.get("session")?.trim().toUpperCase();
-    if (!sessionParam || sessionParam.length !== 6) return;
+    const sessionParam = params?.get("session")?.trim();
+    if (!sessionParam) return;
 
     autoJoinAttemptedRef.current = true;
-    joinSession(sessionParam);
+    setPendingJoinSession(sessionParam);
+    setMode("join");
     window.history.replaceState({}, "", window.location.pathname);
   }, [userIdLoading, mode]);
 
@@ -651,6 +651,16 @@ export default function HaikuPairApp() {
 
   // --- セッション操作 ---
   const createSession = async () => {
+    if (!userName.trim()) {
+      alert("お名前を入力してください。");
+      return;
+    }
+    const uuid = await ensureUserIdAndProfile();
+    if (!uuid) {
+      alert("ユーザー情報の読み込みに失敗しました。ページを再読み込みしてください。");
+      return;
+    }
+
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     setSessionId(id);
@@ -694,12 +704,10 @@ export default function HaikuPairApp() {
       setDbSessionId(createdSession.id);
 
       // client_key の生成・取得（user_id と別物。座席管理用）
-      const clientKey =
-        localStorage.getItem("client_key") ?? crypto.randomUUID();
-      localStorage.setItem("client_key", clientKey);
+      const clientKey = ensureClientKey() ?? crypto.randomUUID();
 
       // participants に host を insert。user_id は常に localStorage から取得
-      const hostUserId = getMyUserUuid() ?? ensureMyUserUuid();
+      const hostUserId = getMyUserUuid() ?? uuid;
       console.log("[Debug] participants insert 直前 (host) - my_user_uuid:", hostUserId);
       const { data: createdParticipant, error: participantError } =
         await supabase
@@ -728,8 +736,13 @@ export default function HaikuPairApp() {
   };
 
   const joinSession = async (id: string) => {
-    // user_id は常に localStorage から取得
-    const freshUserId = getMyUserUuid() ?? ensureMyUserUuid();
+    if (!userName.trim()) {
+      alert("お名前を入力してから参加してください。");
+      return;
+    }
+
+    // user_id/profiles は参加直前に生成・登録
+    const freshUserId = await ensureUserIdAndProfile();
     console.log("[Debug] joinSession - my_user_uuid:", freshUserId);
 
     try {
@@ -777,10 +790,8 @@ export default function HaikuPairApp() {
           setDbSessionId(session.id);
 
           // guest を insert。user_id は常に localStorage から取得
-          const clientKey =
-            localStorage.getItem("client_key") ?? crypto.randomUUID();
-          localStorage.setItem("client_key", clientKey);
-          const participantUserId = getMyUserUuid() ?? ensureMyUserUuid();
+          const clientKey = ensureClientKey() ?? crypto.randomUUID();
+          const participantUserId = getMyUserUuid() ?? freshUserId;
           console.log("[Debug] participants insert 直前 (guest) - my_user_uuid:", participantUserId);
 
           const { data: insertedParticipant, error: participantError } =
@@ -1127,7 +1138,19 @@ export default function HaikuPairApp() {
         );
       case "join":
         return (
-          <JoinScreen onJoin={joinSession} onBack={() => setMode("home")} />
+          <JoinScreen
+            userName={userName}
+            onUserNameChange={setUserName}
+            pendingSessionId={pendingJoinSession}
+            onJoin={(sessionKey) => {
+              setPendingJoinSession("");
+              joinSession(sessionKey);
+            }}
+            onBack={() => {
+              setPendingJoinSession("");
+              setMode("home");
+            }}
+          />
         );
       case "host":
         return (

@@ -5,12 +5,22 @@ import HelpWizardModal from '@/components/modals/HelpWizardModal';
 import { HelpCircle } from 'lucide-react';
 
 interface JoinScreenProps {
+  userName: string;
+  onUserNameChange: (name: string) => void;
+  /** QR/URL 参加で事前に埋めたい場合 */
+  pendingSessionId?: string;
   onJoin: (sessionId: string) => void;
   onBack: () => void;
 }
 
-export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
-  const [inputId, setInputId] = useState('');
+export default function JoinScreen({
+  userName,
+  onUserNameChange,
+  pendingSessionId,
+  onJoin,
+  onBack,
+}: JoinScreenProps) {
+  const [inputId, setInputId] = useState(pendingSessionId ?? '');
   const [showHelpWizard, setShowHelpWizard] = useState(false);
 
   return (
@@ -33,6 +43,13 @@ export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
         <div className="space-y-4">
           <input
             type="text"
+            value={userName}
+            onChange={(e) => onUserNameChange(e.target.value)}
+            placeholder="あなたの名前（芭蕉、蕪村など）"
+            className="w-full p-4 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-400 text-center text-xl"
+          />
+          <input
+            type="text"
             placeholder="セッションID（6桁）"
             maxLength={6}
             value={inputId}
@@ -43,7 +60,7 @@ export default function JoinScreen({ onJoin, onBack }: JoinScreenProps) {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => onJoin(inputId)}
-              disabled={inputId.length !== 6}
+              disabled={!userName.trim() || inputId.length !== 6}
               className="bg-stone-800 text-white px-6 py-3 rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
             >
               参加する
