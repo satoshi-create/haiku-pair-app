@@ -103,6 +103,7 @@ export default function HostScreen({
         onClose={() => setShowHelpWizard(false)}
         variant="host-wait"
         role="host"
+        printBundleCover
       />
     </div>
   );

@@ -81,6 +81,7 @@ export default function JoinScreen({
         onClose={() => setShowHelpWizard(false)}
         variant="join"
         role="guest"
+        printBundleCover
       />
     </div>
   );

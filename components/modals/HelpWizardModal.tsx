@@ -1,6 +1,7 @@
-  "use client";
+"use client";
 
-  import { Printer, X } from "lucide-react";
+import { PrintCoverPage } from "@/components/PrintView";
+import { Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -45,24 +46,31 @@ function HelpGuideFigure({
   );
 }
 
-  interface HelpWizardModalProps {
-    show: boolean;
-    onClose: () => void;
-    role?: "host" | "guest";
-    /** どの画面のガイドか。省略時は "session" */
-    variant?: HelpVariant;
-    /** 俳句作成画面の activeStep と同期する場合に指定（1〜5）。指定時はヘルプの表示ステップがこれに追従する */
-    syncStep?: number;
-  }
+interface HelpWizardModalProps {
+  show: boolean;
+  onClose: () => void;
+  role?: "host" | "guest";
+  /** どの画面のガイドか。省略時は "session" */
+  variant?: HelpVariant;
+  /** 俳句作成画面の activeStep と同期する場合に指定（1〜5）。指定時はヘルプの表示ステップがこれに追従する */
+  syncStep?: number;
+  /**
+   * 「全部まとめて印刷」時に、`role` に応じた表紙を 1 ページ目に付ける。
+   * 座を立てる / 座に参加 の操作ガイド用。
+   */
+  printBundleCover?: boolean;
+}
 
-  export default function HelpWizardModal({
-    show,
-    onClose,
-    role = "host",
-    variant = "session",
-    syncStep,
-  }: HelpWizardModalProps) {
+export default function HelpWizardModal({
+  show,
+  onClose,
+  role = "host",
+  variant = "session",
+  syncStep,
+  printBundleCover = false,
+}: HelpWizardModalProps) {
   const [printMode, setPrintMode] = useState<"current" | "all">("current");
+
   const steps = getStepsForVariant(variant, role);
   const totalSteps = steps.length;
   // 旧: タイトル文字列（例：ホームの操作ガイド）は使わず、現在の Step と見出しで表示する
@@ -78,26 +86,28 @@ function HelpGuideFigure({
     return [currentStep];
   }, [currentStep, printMode, role]);
 
-    const handlePrint = useCallback(() => {
-      document.body.classList.add("help-wizard-print-mode");
-      const cleanup = () => {
-        document.body.classList.remove("help-wizard-print-mode");
-        window.removeEventListener("afterprint", cleanup);
-      };
-      window.addEventListener("afterprint", cleanup);
-      // DOM 更新を待ってから印刷（プレビュー白紙対策）
+  const showBundleCover = printBundleCover && printMode === "all";
+
+  const handlePrint = useCallback(() => {
+    document.body.classList.add("help-wizard-print-mode");
+    const cleanup = () => {
+      document.body.classList.remove("help-wizard-print-mode");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    // DOM 更新を待ってから印刷（プレビュー白紙対策）
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.print();
-        });
+        window.print();
       });
-    }, []);
+    });
+  }, []);
 
-    if (!show) return null;
+  if (!show) return null;
 
-    const showStepInHeader = variant === "session" && totalSteps > 1;
+  const showStepInHeader = variant === "session" && totalSteps > 1;
 
-    return (
+  return (
       <>
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
@@ -195,6 +205,11 @@ function HelpGuideFigure({
               className="help-wizard-print-root hidden"
               aria-hidden="true"
             >
+              {showBundleCover && (
+                <div className="help-wizard-print-cover">
+                  <PrintCoverPage audience={role} />
+                </div>
+              )}
               {printSteps.map((s, i) => {
                 const stepLine =
                   printMode === "all"
@@ -217,23 +232,23 @@ function HelpGuideFigure({
                       {s.title}
                     </h2>
                     <div
-                      className="help-wizard-print-grid grid grid-cols-2 gap-6 items-stretch"
+                      className="help-wizard-print-grid grid grid-cols-2 gap-6 items-stretch isolate min-w-0"
                       style={{ breakInside: "avoid" }}
                     >
-                      {/* 左：テキスト */}
+                      {/* 左：テキスト（印刷時は globals.css で列内に背景・クリップを閉じる） */}
                       <div className="help-wizard-print-text min-w-0">
                         <ol className="space-y-2 text-base text-stone-900 mb-4">
                           {s.actions.map((item, j) => (
                             <li key={j}>{item}</li>
                           ))}
                         </ol>
-                        <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-stone-50">
+                        <blockquote className="border-l-4 border-stone-800 pl-4 py-2 bg-white">
                           <p className="text-base text-stone-900 font-kaisei">「{s.nudge}」</p>
                         </blockquote>
                       </div>
 
                       {/* 右：画像（印刷時は @media print で高さ・アスペクトを制御） */}
-                      <div className="help-wizard-print-figure min-w-0 flex items-center justify-center bg-white">
+                      <div className="help-wizard-print-figure min-w-0 flex items-center justify-center bg-white overflow-visible">
                         <HelpGuideFigure step={s} layout="print" />
                       </div>
                     </div>
@@ -245,5 +260,5 @@ function HelpGuideFigure({
             document.body
           )}
       </>
-    );
-  }
+  );
+}
